@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#343a40">
+    <meta name="description" content="Translate Subtitles online">
+    <meta name="color-scheme" content="light dark">
+    <title>Translate Subtitles (Dictionary Priority)</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-light: #6366f1;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --border-color: #e5e7eb;
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --bg-primary: #ffffff;
+            --bg-secondary: #f9fafb;
+        }
+
+        [data-bs-theme="dark"] {
+            --primary: #6366f1;
+            --primary-light: #818cf8;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --border-color: #374151;
+            --text-primary: #f9fafb;
+            --text-secondary: #d1d5db;
+            --bg-primary: #111827;
+            --bg-secondary: #1f2937;
+        }
+
+        body { background-color: var(--bg-secondary); color: var(--text-primary); }
+        .navbar { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%) !important; }
+        .hero-section { background: rgba(79, 70, 229, 0.05); padding: 2.5rem 0; border-bottom: 1px solid var(--border-color); }
+        .card { border-radius: 12px; background-color: var(--bg-primary); margin-bottom: 1.5rem; }
+        .btn-primary { background-color: var(--primary); border: none; }
+        .btn-primary:hover { background-color: var(--primary-light); }
+        .custom-file-label { border: 2px dashed var(--border-color); border-radius: 8px; padding: 1.5rem; text-align: center; cursor: pointer; display: block; }
+        .dict-item { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: var(--bg-secondary); margin-bottom: 5px; border-radius: 6px; }
+        .dict-item-delete { color: var(--danger); cursor: pointer; }
+        .progress { height: 10px; margin: 15px 0; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark sticky-top">
+        <div class="container">
+            <span class="navbar-brand"><i class="fas fa-closed-captioning"></i> SubtitleAI Pro</span>
+        </div>
+    </nav>
+
+    <div class="main-container">
+        <div class="hero-section text-center">
+            <div class="container">
+                <h1 class="hero-title">Translate Subtitles v3.1</h1>
+                <p class="text-secondary">ระบบแปลไฟล์ SRT โดยให้ความสำคัญกับพจนานุกรมส่วนตัวของคุณก่อน</p>
+            </div>
+        </div>
+
+        <div class="container mt-4 mb-5">
+            <div class="row">
+                <div class="col-lg-8 mx-auto">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0"><i class="fas fa-book"></i> 1. พจนานุกรมกำหนดเอง (Custom Dictionary)</h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="small text-muted">คำที่ระบุที่นี่จะถูกนำไปใช้ทันทีโดยไม่ผ่านการแปลของ Google (เช่น No. -> ไม่)</p>
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-5">
+                                    <input type="text" class="form-control" id="customWordInput" placeholder="คำต้นฉบับ (เช่น No.)">
+                                </div>
+                                <div class="col-md-5">
+                                    <input type="text" class="form-control" id="customTranslationInput" placeholder="คำแปลที่ต้องการ (เช่น ไม่)">
+                                </div>
+                                <div class="col-md-2">
+                                    <button class="btn btn-primary w-100" onclick="addCustomTranslation()"><i class="fas fa-plus"></i></button>
+                                </div>
+                            </div>
+                            <div id="dictionaryList" style="max-height: 150px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px;"></div>
+                        </div>
+                    </div>
+
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">2. อัปโหลดไฟล์ .srt</label>
+                                <input type="file" id="file" class="d-none" accept=".srt">
+                                <label class="custom-file-label" for="file" id="fileDisplay">
+                                    <i class="fas fa-upload fa-2x mb-2"></i><br>คลิกเพื่อเลือกไฟล์ Subtitle
+                                </label>
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">3. เลือกภาษาที่ต้องการแปล</label>
+                                <select class="form-select" id="language-select">
+                                    <option value="th" selected>Thai (ไทย)</option>
+                                    <option value="en">English</option>
+                                    <option value="ja">Japanese</option>
+                                    <option value="ko">Korean</option>
+                                    <option value="zh-CN">Chinese</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-2">
+                                <label class="form-label fw-bold">4. API Key (ถ้ามี) </label> <span style="color: #F3F4F6;">AIzaSyBOti4mM-6x9WDnZIjIeyEU21OpBXqWBgw</span>
+                                <input type="password" class="form-control" id="apiKey" placeholder="Google Cloud API Key (ปล่อยว่างเพื่อใช้ฟรี)">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card shadow-sm border-primary">
+                        <div class="card-body text-center">
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-primary btn-lg btn-translate" disabled>
+                                    <i class="fas fa-magic"></i> เริ่มการแปล
+                                </button>
+                            </div>
+
+                            <div id="loadingArea" style="display: none;" class="mt-3">
+                                <div class="progress">
+                                    <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%"></div>
+                                </div>
+                                <p class="small text-muted">กำลังประมวลผล: <span id="currentStatus">0</span>/<span id="totalStatus">0</span></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="reviewCard" class="card shadow-sm" style="display: none;">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0">5. ตรวจสอบและดาวน์โหลด</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive" style="max-height: 400px;">
+                                <table class="table table-sm small">
+                                    <thead class="table-light sticky-top">
+                                        <tr><th>#</th><th>ต้นฉบับ</th><th>ผลการแปล</th></tr>
+                                    </thead>
+                                    <tbody id="tbody"></tbody>
+                                </table>
+                            </div>
+                            <button class="btn btn-success btn-lg w-100 mt-3" onclick="downloadTranslatedSubtitles()">
+                                <i class="fas fa-download"></i> ดาวน์โหลดไฟล์ .srt
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let subtitles = [];
+        let translatedSubtitles = [];
+        let customDictionary = JSON.parse(localStorage.getItem('customDictionary') || '{}');
+
+        // Dictionary Functions
+        function updateDictionaryUI() {
+            const list = document.getElementById('dictionaryList');
+            list.innerHTML = Object.keys(customDictionary).length ? '' : '<div class="text-center text-muted">ไม่มีคำเฉพาะ</div>';
+            for (const [key, val] of Object.entries(customDictionary)) {
+                list.innerHTML += `
+                    <div class="dict-item">
+                        <span><b>${key}</b> → ${val}</span>
+                        <i class="fas fa-trash dict-item-delete" onclick="removeDict('${key}')"></i>
+                    </div>`;
+            }
+            localStorage.setItem('customDictionary', JSON.stringify(customDictionary));
+        }
+
+        function addCustomTranslation() {
+            const word = document.getElementById('customWordInput').value.trim();
+            const trans = document.getElementById('customTranslationInput').value.trim();
+            if(word && trans) {
+                customDictionary[word] = trans;
+                document.getElementById('customWordInput').value = '';
+                document.getElementById('customTranslationInput').value = '';
+                updateDictionaryUI();
+            }
+        }
+
+        function removeDict(key) {
+            delete customDictionary[key];
+            updateDictionaryUI();
+        }
+
+        // File Parsing
+        document.getElementById('file').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            document.getElementById('fileDisplay').innerHTML = `<b>ไฟล์ที่เลือก:</b> ${file.name}`;
+            
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const content = event.target.result;
+                const blocks = content.split(/\n\s*\n/).filter(b => b.trim());
+                subtitles = blocks.map(block => {
+                    const lines = block.split('\n').filter(l => l.trim());
+                    const timeMatch = lines[1]?.match(/(\d{2}:\d{2}:\d{2},\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2},\d{3})/);
+                    return timeMatch ? {
+                        index: lines[0],
+                        start: timeMatch[1],
+                        end: timeMatch[2],
+                        text: lines.slice(2).join('\n').trim()
+                    } : null;
+                }).filter(s => s !== null);
+                document.querySelector('.btn-translate').disabled = false;
+            };
+            reader.readAsText(file);
+        });
+
+        // Translation Logic
+        async function translateText(text, targetLang, apiKey) {
+            if (!text) return "";
+            try {
+                if (apiKey) {
+                    const res = await fetch(`https://translation.googleapis.com/language/translate/v2?key=${apiKey}`, {
+                        method: 'POST',
+                        body: JSON.stringify({ q: text, target: targetLang })
+                    });
+                    const data = await res.json();
+                    return data.data.translations[0].translatedText;
+                } else {
+                    const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`);
+                    const data = await res.json();
+                    return data[0].map(x => x[0]).join('');
+                }
+            } catch (e) { return text; }
+        }
+
+        document.querySelector('.btn-translate').addEventListener('click', async function() {
+            const targetLang = document.getElementById('language-select').value;
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const btn = this;
+            
+            btn.disabled = true;
+            document.getElementById('loadingArea').style.display = 'block';
+            document.getElementById('totalStatus').textContent = subtitles.length;
+            
+            translatedSubtitles = [];
+            const batchSize = 10;
+
+            for (let i = 0; i < subtitles.length; i += batchSize) {
+                const batch = subtitles.slice(i, i + batchSize);
+                const results = await Promise.all(batch.map(async (sub) => {
+                    let finalTrans = "";
+                    let isCustom = false;
+
+                    // CHECK DICTIONARY FIRST
+                    for (const [orig, cust] of Object.entries(customDictionary)) {
+                        // เช็คแบบ Case-insensitive และตัดช่องว่าง
+                        if (sub.text.trim().toLowerCase() === orig.toLowerCase()) {
+                            finalTrans = cust;
+                            isCustom = true;
+                            break;
+                        }
+                    }
+
+                    if (!isCustom) {
+                        finalTrans = await translateText(sub.text, targetLang, apiKey);
+                    }
+
+                    return { ...sub, translatedText: finalTrans };
+                }));
+
+                translatedSubtitles.push(...results);
+                document.getElementById('progressBar').style.width = `${((i + batchSize) / subtitles.length) * 100}%`;
+                document.getElementById('currentStatus').textContent = Math.min(i + batchSize, subtitles.length);
+            }
+
+            // Display Results
+            const tbody = document.getElementById('tbody');
+            tbody.innerHTML = translatedSubtitles.map(s => `<tr><td>${s.index}</td><td class="text-muted">${s.text}</td><td class="fw-bold">${s.translatedText}</td></tr>`).join('');
+            document.getElementById('reviewCard').style.display = 'block';
+            document.getElementById('loadingArea').style.display = 'none';
+            btn.disabled = false;
+        });
+
+        function downloadTranslatedSubtitles() {
+            const content = translatedSubtitles.map(s => `${s.index}\n${s.start} --> ${s.end}\n${s.translatedText}\n`).join('\n');
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            
+            // ดึงชื่อไฟล์เดิมและภาษาที่เลือก
+            const originalFileName = document.getElementById('file').files[0]?.name || 'subtitle.srt';
+            const targetLang = document.getElementById('language-select').value.toUpperCase();
+            
+            a.href = url;
+            a.download = `translated-${targetLang}-${originalFileName}`;
+            a.click();
+        }
+
+        // Init
+        updateDictionaryUI();
+    </script>
+</body>
+</html>
