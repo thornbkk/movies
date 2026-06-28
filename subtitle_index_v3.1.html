@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Subtitle Index V.3.1 Translator | Thorn BKK</title>
+  <title>Subtitle Index V.3.3.3 Translator | Thorn BKK</title>
   <style>
     :root {
       --primary: #2563eb;
@@ -14,6 +14,7 @@
       --text-muted: #64748b;
       --border: #e2e8f0;
       --success: #16a34a;
+      --danger: #ef4444;
     }
     body {
       font-family: system-ui, -apple-system, sans-serif;
@@ -107,7 +108,6 @@
       gap: 1rem;
     }
     
-    /* สไตล์สำหรับส่วนจัดการคำแทนที่ */
     .replace-container {
       display: flex;
       flex-direction: column;
@@ -134,11 +134,36 @@
       border: 1px dashed #cbd5e1;
       font-size: 0.85rem;
       padding: 0.5rem;
-      margin-bottom: 1rem;
+      margin-bottom: 0.5rem;
     }
     .btn-add-word:hover { background: #e2e8f0; }
     .btn-remove-row { background: #fee2e2; color: #ef4444; }
     .btn-remove-row:hover { background: #fca5a5; }
+
+    .settings-file-group {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .btn-file-action {
+      flex: 1;
+      padding: 0.5rem;
+      font-size: 0.85rem;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.25rem;
+      background: #ffffff;
+      color: #334155;
+      transition: background 0.2s;
+    }
+    .btn-file-action:hover {
+      background: #f8fafc;
+    }
 
     .btn {
       display: inline-flex;
@@ -160,6 +185,7 @@
     .btn-secondary:disabled { background: #cbd5e1; cursor: not-allowed; }
     .btn-reset { background: #ef4444; color: white; margin-top: 0.5rem;}
     .btn-reset:hover { background: #dc2626; }
+    
     .status-stack {
       margin: 1rem 0;
       padding: 1rem;
@@ -196,6 +222,9 @@
       border-bottom: 1px solid var(--border);
       background: white;
     }
+    .table__row.row-error {
+      background: #fef2f2;
+    }
     .table__head {
       background: #f1f5f9;
       font-weight: bold;
@@ -209,9 +238,9 @@
   <main>
     <section class="hero">
       <div class="container">
-        <div class="hero-tag">TRANSLATOR</div>
+        <div class="hero-tag">TRANSLATOR V.3.3.3</div>
         <h1>Online subtitle translator to translate SRT files without losing timing</h1>
-        <p class="muted">Upload one .srt subtitle file, choose target language, and download a rebuilt subtitle export with cue timing preserved.</p>
+        <p class="muted">Optimized Batch Translation Mode: Faster, SAFER, and support Word Boundary Replace.</p>
       </div>
     </section>
 
@@ -234,21 +263,28 @@
         <div class="card">
           <p class="pill">Step 2</p>
           <h3>Translation Settings</h3>
-          
+           
           <div class="form-group">
             <label for="googleApiKey">Google Translate API Key V.2 (Optional)</label>
             <input type="text" id="googleApiKey" list="apiKeysList" placeholder="คลิกเพื่อเลือกหรือวาง API Key V.2 ตรงนี้...">
-            <datalist id="apiKeysList">
-              <option value="">ค่าที่ 1</option>
-              <option value="">ค่าที่ 2</option>
-            </datalist>
+            <datalist id="apiKeysList"></datalist>
+            <div class="settings-file-group" style="margin-bottom:0;">
+              <button type="button" class="btn-file-action" id="saveApiKeyBtn">＋ บันทึกคีย์นี้ไว้ในรายการ</button>
+              <button type="button" class="btn-file-action" id="deleteApiKeyBtn">🗑 ลบคีย์นี้ออกจากรายการ</button>
+            </div>
           </div>
 
           <div class="form-group">
-            <label>Pre-Translation Replace (Optional)</label>
+            <label>Pre-Translation Replace (Smart Word Boundary)</label>
             <div id="replaceContainer" class="replace-container">
-              </div>
+            </div>
             <button type="button" id="addWordBtn" class="btn-row-action btn-add-word">+ เพิ่มคำศัพท์</button>
+            
+            <div class="settings-file-group">
+              <button type="button" class="btn-file-action" onclick="exportSettingsToFile()">💾 ส่งออกความจำ</button>
+              <button type="button" class="btn-file-action" onclick="document.getElementById('settingsFileInput').click()">📂 นำเข้าความจำ</button>
+              <input type="file" id="settingsFileInput" accept=".json" onchange="importSettingsFromFile(event)" style="display: none;">
+            </div>
           </div>
 
           <div class="inline-grid">
@@ -273,7 +309,7 @@
           </div>
 
           <div class="actions-shell">
-            <button id="translateBtn" class="btn btn-primary" type="button" disabled>Start Translation</button>
+            <button id="translateBtn" class="btn btn-primary" type="button" disabled>Start Translation (Batch Mode)</button>
             <button class="btn btn-reset" type="button" id="resetBtn">Reset</button>
             
             <div class="status-stack">
@@ -312,7 +348,7 @@
   <script>
     let parsedCues = [];
     let translatedCues = [];
-    let originalFileName = "subtitles.srt"; // ตัวแปรสำหรับเก็บชื่อไฟล์เดิมเริ่มต้น
+    let originalFileName = "subtitles.srt";
 
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
@@ -328,13 +364,21 @@
     const replaceContainer = document.getElementById('replaceContainer');
     const addWordBtn = document.getElementById('addWordBtn');
     const googleApiKeyInput = document.getElementById('googleApiKey');
+    const apiKeysListEl = document.getElementById('apiKeysList');
+    const saveApiKeyBtn = document.getElementById('saveApiKeyBtn');
+    const deleteApiKeyBtn = document.getElementById('deleteApiKeyBtn');
 
-    // ฟังก์ชันสร้างแถวค้นหา/แทนที่คำศัพท์
+    function decodeHTML(html) {
+      const txt = document.createElement("textarea");
+      txt.innerHTML = html;
+      return txt.value;
+    }
+
     function createReplaceRow(findVal = '', replaceVal = '') {
       const row = document.createElement('div');
       row.className = 'replace-row';
       row.innerHTML = `
-        <input type="text" class="find-input" placeholder="คำเดิม (เช่น No.)" value="${findVal}">
+        <input type="text" class="find-input" placeholder="คำเดิม (เช่น No)" value="${findVal}">
         <input type="text" class="replace-input" placeholder="คำใหม่ที่ต้องการแทนที่" value="${replaceVal}">
         <button type="button" class="btn-row-action btn-remove-row">✕</button>
       `;
@@ -379,12 +423,83 @@
       if (savedRules) {
         const rules = JSON.parse(savedRules);
         if (rules.length > 0) {
+          replaceContainer.innerHTML = '';
           rules.forEach(rule => createReplaceRow(rule.find, rule.replace));
           return;
         }
       }
-      createReplaceRow();
+      
+      // 🌟 ใส่ชุดคำศัพท์ "No" ของคุณเป็นค่าเริ่มต้นของโปรแกรมหากเครื่องยังไม่มีประวัติบันทึก
+      const defaultRules = [
+        { "find": "No.", "replace": "No\u200B.\u200B" },
+        { "find": "No..", "replace": "No\u200B.\u200B. " },
+        { "find": "No...", "replace": "No\u200B.\u200B.. " },
+        { "find": "No?", "replace": "No\u200B?\u200B" },
+        { "find": "-No.", "replace": "-No\u200B.\u200B" },
+        { "find": "-No", "replace": "No\u200B\u200B" },
+        { "find": "No,", "replace": "No\u200B,\u200B" },
+        { "find": "No", "replace": "No\u200B " },
+        { "find": "No\u200B No\u200B", "replace": "No\u200B No\u200B " },
+        { "find": "no", "replace": "No\u200B " }
+      ];
+      
+      replaceContainer.innerHTML = '';
+      defaultRules.forEach(rule => createReplaceRow(rule.find, rule.replace));
+      saveRulesToLocalStorage();
     }
+
+    function getSavedApiKeys() {
+      try {
+        const raw = localStorage.getItem('srt_google_api_keys_list');
+        const arr = raw ? JSON.parse(raw) : [];
+        return Array.isArray(arr) ? arr : [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function renderApiKeysDatalist() {
+      const keys = getSavedApiKeys();
+      apiKeysListEl.innerHTML = '';
+      keys.forEach((key, idx) => {
+        const opt = document.createElement('option');
+        opt.value = key;
+        opt.label = `API Key ที่ ${idx + 1}`;
+        apiKeysListEl.appendChild(opt);
+      });
+    }
+
+    function saveCurrentApiKey() {
+      const key = googleApiKeyInput.value.trim();
+      if (key === '') {
+        alert('กรุณาใส่ API Key ก่อนบันทึก');
+        return;
+      }
+      const keys = getSavedApiKeys();
+      if (!keys.includes(key)) {
+        keys.push(key);
+        localStorage.setItem('srt_google_api_keys_list', JSON.stringify(keys));
+        renderApiKeysDatalist();
+      }
+      localStorage.setItem('srt_google_api_key', key);
+      alert('บันทึก API Key ลงในรายการแล้วครับ');
+    }
+
+    function deleteCurrentApiKey() {
+      const key = googleApiKeyInput.value.trim();
+      if (key === '') return;
+      let keys = getSavedApiKeys();
+      keys = keys.filter(k => k !== key);
+      localStorage.setItem('srt_google_api_keys_list', JSON.stringify(keys));
+      renderApiKeysDatalist();
+      googleApiKeyInput.value = '';
+      localStorage.removeItem('srt_google_api_key');
+      alert('ลบ API Key ออกจากรายการแล้วครับ');
+    }
+
+    saveApiKeyBtn.addEventListener('click', saveCurrentApiKey);
+    deleteApiKeyBtn.addEventListener('click', deleteCurrentApiKey);
+    renderApiKeysDatalist();
 
     addWordBtn.addEventListener('click', () => {
       createReplaceRow();
@@ -396,6 +511,48 @@
     });
 
     loadSavedData();
+
+    function exportSettingsToFile() {
+      const apiKey = googleApiKeyInput.value.trim();
+      const rules = getReplaceRules();
+      const settingsData = { apiKey: apiKey, replaceRules: rules };
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(settingsData, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", "translator_settings.json");
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    }
+
+    function importSettingsFromFile(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const settingsData = JSON.parse(e.target.result);
+          if (settingsData.apiKey !== undefined) {
+            googleApiKeyInput.value = settingsData.apiKey;
+            localStorage.setItem('srt_google_api_key', settingsData.apiKey);
+          }
+          if (settingsData.replaceRules && Array.isArray(settingsData.replaceRules)) {
+            replaceContainer.innerHTML = '';
+            if (settingsData.replaceRules.length > 0) {
+              settingsData.replaceRules.forEach(rule => createReplaceRow(rule.find, rule.replace));
+            } else {
+              createReplaceRow();
+            }
+            saveRulesToLocalStorage();
+          }
+          alert("นำเข้าข้อมูลการตั้งค่าความจำเรียบร้อยแล้วครับ!");
+        } catch (error) {
+          alert("เกิดข้อผิดพลาด: ไฟล์ไม่ถูกต้องหรือไม่รองรับรูปแบบนี้");
+        }
+      };
+      reader.readAsText(file);
+      event.target.value = '';
+    }
 
     dropZone.addEventListener('click', () => fileInput.click());
     dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
@@ -414,8 +571,7 @@
         alert('Please upload a valid .srt file');
         return;
       }
-      originalFileName = file.name; // บันทึกชื่อไฟล์จริงที่ผู้ใช้อัปโหลดเข้ามาเก็บไว้
-      
+      originalFileName = file.name;
       const reader = new FileReader();
       reader.onload = function(e) {
         const text = e.target.result;
@@ -452,45 +608,61 @@
       });
     }
 
-    function fetchTranslateSingle(text, fromLang, toLang) {
+    function fetchTranslateBatch(textsArray, fromLang, toLang) {
       return new Promise((resolve) => {
-        const sl = fromLang === 'auto' ? 'auto' : fromLang;
-        const cleanText = encodeURIComponent(text);
         const apiKey = googleApiKeyInput.value.trim();
+        const sl = fromLang === 'auto' ? 'auto' : fromLang;
 
         if (apiKey !== '') {
-          const sourceParam = sl === 'auto' ? '' : `&source=${sl}`;
-          const v2Url = `https://translation.googleapis.com/language/translate/v2?key=${apiKey}&q=${cleanText}&target=${toLang}${sourceParam}`;
-          
-          fetch(v2Url)
-            .then(res => res.json())
-            .then(data => {
-              if (data && data.data && data.data.translations) {
-                resolve(data.data.translations[0].translatedText);
-              } else {
-                resolve(text);
-              }
-            })
-            .catch(() => {
-              resolve(text);
-            });
+          let v2Url = `https://translation.googleapis.com/language/translate/v2?key=${apiKey}`;
+          let bodyData = { q: textsArray, target: toLang };
+          if (sl !== 'auto') bodyData.source = sl;
+
+          fetch(v2Url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(bodyData)
+          })
+          .then(res => res.json())
+          .then(data => {
+            if (data && data.data && data.data.translations) {
+              let results = data.data.translations.map(t => decodeHTML(t.translatedText));
+              resolve({ success: true, results: results });
+            } else {
+              resolve({ success: false, fallbackTexts: textsArray });
+            }
+          })
+          .catch(() => {
+            resolve({ success: false, fallbackTexts: textsArray });
+          });
           return;
         }
 
+        const batchSeparator = " ___ ";
+        const combinedText = textsArray.join(batchSeparator);
+        const cleanText = encodeURIComponent(combinedText);
         const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${toLang}&dt=t&q=${cleanText}`;
 
         fetch(url)
           .then(res => res.json())
           .then(data => {
             if (data && data[0]) {
-              let translatedParts = data[0].map(x => x[0]).join('');
-              resolve(translatedParts);
+              let translatedFullText = data[0].map(x => x[0]).join('');
+              translatedFullText = decodeHTML(translatedFullText);
+              let splitResults = translatedFullText.split(/___|_\s_\s_/);
+              splitResults = splitResults.map(s => s.trim());
+
+              if (splitResults.length === textsArray.length) {
+                resolve({ success: true, results: splitResults });
+              } else {
+                resolve({ success: false, fallbackTexts: textsArray });
+              }
             } else {
-              resolve(text);
+              resolve({ success: false, fallbackTexts: textsArray });
             }
           })
           .catch(() => {
-            resolve(text);
+            resolve({ success: false, fallbackTexts: textsArray });
           });
       });
     }
@@ -501,7 +673,7 @@
       if (parsedCues.length === 0) return;
       
       translateBtn.disabled = true;
-      statusText.innerText = "Translating with Smart Queue...";
+      statusText.innerText = "Translating with Optimized Batch Queue...";
       progressBarFill.style.width = `0%`;
 
       const fromLang = document.getElementById('fromLanguage').value;
@@ -510,51 +682,68 @@
 
       translatedCues = [];
       let completed = 0;
-      const concurrencyLimit = 5;
+      
+      const apiKey = googleApiKeyInput.value.trim();
+      const batchSize = apiKey !== '' ? 20 : 10; 
 
-      for (let i = 0; i < parsedCues.length; i += concurrencyLimit) {
-        const chunk = parsedCues.slice(i, i + concurrencyLimit);
+      for (let i = 0; i < parsedCues.length; i += batchSize) {
+        const chunk = parsedCues.slice(i, i + batchSize);
         
-        const promises = chunk.map(async (cue) => {
-          let textToTranslate = cue.text;
-          
+        const textsToTranslate = chunk.map(cue => {
+          let txt = cue.text;
           replaceRules.forEach(rule => {
             const escapeRegExp = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            const regex = new RegExp(escapeRegExp(rule.find), 'g');
-            textToTranslate = textToTranslate.replace(regex, rule.replace);
+            const regex = new RegExp(`\\b${escapeRegExp(rule.find)}\\b`, 'gi');
+            txt = txt.replace(regex, rule.replace);
           });
-
-          const translatedText = await fetchTranslateSingle(textToTranslate, fromLang, toLang);
-          const translatedCue = { ...cue, text: textToTranslate, translatedText };
-          translatedCues.push(translatedCue);
-          appendRowToTable(translatedCue);
-          
-          completed++;
-          const progressPercent = Math.min((completed / parsedCues.length) * 100, 100);
-          progressBarFill.style.width = `${progressPercent}%`;
-          progressMeta.innerText = `Translated ${completed} of ${parsedCues.length} lines...`;
+          return txt;
         });
 
-        await Promise.all(promises);
-        await delay(50);
+        const response = await fetchTranslateBatch(textsToTranslate, fromLang, toLang);
+        
+        chunk.forEach((cue, index) => {
+          let processedText = textsToTranslate[index];
+          let translatedText = "";
+          let isErrorRow = false;
+
+          if (response.success) {
+            translatedText = response.results[index] || processedText;
+          } else {
+            translatedText = processedText; 
+            isErrorRow = true;
+          }
+
+          const translatedCue = { ...cue, text: processedText, translatedText, isError: isErrorRow };
+          translatedCues.push(translatedCue);
+          appendRowToTable(translatedCue);
+          completed++;
+        });
+
+        const progressPercent = Math.min((completed / parsedCues.length) * 100, 100);
+        progressBarFill.style.width = `${progressPercent}%`;
+        progressMeta.innerText = `Translated ${completed} of ${parsedCues.length} lines...`;
+
+        await delay(150);
       }
 
       translatedCues.sort((a, b) => parseInt(a.id) - parseInt(b.id));
 
       statusText.innerText = "Translation Complete!";
-      statusSub.innerText = "Your .srt file has been rebuilt successfully.";
+      statusSub.innerText = "Your .srt file has been rebuilt successfully with Batch optimization.";
       downloadBtn.disabled = false;
     });
 
     function appendRowToTable(cue) {
       const row = document.createElement('div');
-      row.className = 'table__row';
+      row.className = cue.isError ? 'table__row row-error' : 'table__row';
       row.innerHTML = `
         <span>${cue.id}</span>
         <span class="muted" style="font-size:0.8rem">${cue.startTime}</span>
         <span class="muted" style="font-size:0.8rem">${cue.endTime}</span>
         <span style="font-size:0.9rem">${cue.text.replace(/\n/g, ' ')}</span>
-        <strong style="font-size:0.9rem; color:#1e3a8a">${cue.translatedText.replace(/\n/g, ' ')}</strong>
+        <strong style="font-size:0.9rem; color:${cue.isError ? '#ef4444' : '#1e3a8a'}">
+          ${cue.isError ? '[Error: ใช้คำเดิมแทน] ' : ''}${cue.translatedText.replace(/\n/g, ' ')}
+        </strong>
       `;
       resultsTable.appendChild(row);
     }
@@ -565,23 +754,20 @@
         srtContent += `${cue.id}\n${cue.startTime} --> ${cue.endTime}\n${cue.translatedText}\n\n`;
       });
 
-      // ดึงรหัสภาษาที่เลือกและแปลงเป็นตัวพิมพ์ใหญ่ (เช่น th -> TH, zh-CN -> ZH-CN)
       const targetLangSelect = document.getElementById('toLanguage');
       const langCode = targetLangSelect.value.toUpperCase();
 
-      // แยกเอา .srt ของชื่อไฟล์เดิมออกชั่วคราวเพื่อเอามาประกอบร่างชื่อใหม่
       let cleanOriginalName = originalFileName;
       if (cleanOriginalName.toLowerCase().endsWith('.srt')) {
         cleanOriginalName = cleanOriginalName.substring(0, cleanOriginalName.length - 4);
       }
 
-      // ผสมชื่อไฟล์ตามฟอร์แมต: translated_{langCode}_{originalName}.srt
       const outputFileName = `translated_${langCode}_${cleanOriginalName}.srt`;
 
       const blob = new Blob([srtContent], { type: 'text/srt;charset=utf-8;' });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
-      link.download = outputFileName; // ใช้ชื่อไฟล์ตามเงื่อนไขใหม่ที่นี่
+      link.download = outputFileName;
       link.style.display = 'none';
       document.body.appendChild(link);
       link.click();
@@ -591,7 +777,7 @@
     resetBtn.addEventListener('click', () => {
       parsedCues = [];
       translatedCues = [];
-      originalFileName = "subtitles.srt"; // รีเซ็ตชื่อไฟล์เริ่มต้น
+      originalFileName = "subtitles.srt";
       inputText.value = "";
       fileInput.value = "";
       translateBtn.disabled = true;
