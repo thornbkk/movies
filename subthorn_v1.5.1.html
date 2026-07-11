@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SubThorn v.1.5.1 - Cinematic Slang Tuning</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/1.3.8/FileSaver.min.js"></script>
+    <style>
+        body { font-family: sans-serif; background: radial-gradient(circle at center, #116979 0%, #0b444f 100%); color: #ffffff; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; }
+        .main-container { max-width: 600px; width: 100%; text-align: center; padding: 40px 20px; box-sizing: border-box; }
+        .main-title { font-family: "Georgia", serif; font-size: 48px; margin: 0 0 5px 0; }
+        .main-version { font-size: 14px; color: #a5f3fc; font-weight: bold; margin-bottom: 20px; letter-spacing: 1px; }
+        .converter-card { background: #ffffff; color: #333333; border-radius: 16px; padding: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); text-align: left; }
+        .dropzone { border: 2px dashed #cbd5e1; background: #f8fafc; border-radius: 12px; padding: 40px 20px; text-align: center; cursor: pointer; }
+        .form-label { font-size: 13px; color: #334155; font-weight: 600; margin-top: 20px; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+        .select-input, .text-input { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; background: #f1f5f9; box-sizing: border-box; outline: none; }
+        .progress-container { margin-top: 20px; display: none; }
+        .progress-bar-bg { width: 100%; background-color: #e2e8f0; border-radius: 10px; height: 12px; overflow: hidden; }
+        .progress-bar-fill { width: 0%; height: 100%; background-color: #10b981; transition: width 0.1s ease; }
+        .btn-translate { width: 100%; background: #bfdbfe; color: #93c5fd; border: none; padding: 14px; border-radius: 25px; font-weight: bold; margin-top: 25px; cursor: not-allowed; }
+        .btn-translate.active { background: #3b82f6; color: #ffffff; cursor: pointer; }
+        .engine-note { font-size: 11px; color: #64748b; margin-top: 4px; padding-left: 2px; }
+    </style>
+</head>
+<body>
+
+    <div class="main-container">
+        <h1 class="main-title">SubThorn Translation</h1>
+        <div class="main-version">VERSION 1.5.1 (Cinematic Slang Tuning)</div>
+        <div class="converter-card">
+            <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+                <div class="dropzone-icon">📥</div>
+                <p class="dropzone-title">Drag subtitle file here (SRT/ASS/VTT)</p>
+                <input type="file" id="fileInput" accept=".srt,.ass,.ssa,.vtt" style="display:none;">
+            </div>
+
+            <label class="form-label">🤖 Engine</label>
+            <select class="select-input" id="apiEngine">
+                <option value="google_v2" selected>Google Translate V2 / ฟรี (จูนอรรถรสคำสบถและแสลงหนังแล้ว)</option>
+                <option value="openai">OpenAI API (GPT-4o)</option>
+            </select>
+            <div class="engine-note">💡 v.1.5.1 เพิ่มระบบดักคำแปลทื่อ (เช่น อึ -> แม่งเอ๊ย/เชี่ย) ให้ได้อารมณ์ภาพยนตร์</div>
+
+            <label class="form-label">🔑 API Key</label>
+            <input type="password" class="text-input" id="apiKey" placeholder="Your API Key (Optional for Google)">
+
+            <label class="form-label">🌐 Target Language</label>
+            <select class="select-input" id="targetLang">
+                <option value="th" selected>Thai (ภาษาไทย)</option>
+                <option value="en">English</option>
+            </select>
+
+            <div class="progress-container" id="progressContainer">
+                <div style="display:flex; justify-content: space-between; font-size:13px; font-weight:bold; margin-bottom:5px;">
+                    <span id="statusText">📄 Starting...</span>
+                    <span id="percentageText">0%</span>
+                </div>
+                <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressBarFill"></div></div>
+            </div>
+
+            <button class="btn-translate" id="btnTranslate" disabled>Translate</button>
+        </div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const btnTranslate = document.getElementById('btnTranslate');
+        const progressBarFill = document.getElementById('progressBarFill');
+        const statusText = document.getElementById('statusText');
+        const percentageText = document.getElementById('percentageText');
+        let selectedFile = null;
+        let fileExtension = 'srt';
+
+        fileInput.addEventListener('change', (e) => { 
+            if (e.target.files.length > 0) {
+                selectedFile = e.target.files[0];
+                fileExtension = selectedFile.name.split('.').pop().toLowerCase();
+                document.getElementById('progressContainer').style.display = 'block';
+                btnTranslate.removeAttribute('disabled');
+                btnTranslate.classList.add('active');
+                statusText.textContent = "✅ File loaded: " + selectedFile.name;
+            }
+        });
+
+        // ด่านกวาดล้างคราบคำหลอนและคำแปลทื่อ ๆ ดั้งเดิม
+        function cleanThaiSubtitleBugs(text) {
+            if (!text) return "";
+            return text
+                .replace(/^##\s*subtitle\s*line\s*\[\d+\]:\s*/i, '')
+                .replace(/^subtitle\s*line\s*\[\d+\]:\s*/i, '')
+                .replace(/^line\s*\d+\s*:\s*/i, '')
+                .replace(/^(mister|madam|man|lady|boy|girl)\s*[:：]\s*/i, '')
+                .replace(/^(ผู้ชาย|ผู้หญิง|นาย|คุณผู้หญิง|นาง|มาดาม|คุณหญิง|มิสเตอร์|ตัวละคร|เสียง)\s*[:：]\s*/i, '')
+                .replace(/^บรรทัดที่\s*\d+\s*:\s*/i, '')
+                // คำแปลผิดพลาดสะสมของ Google
+                .replace(/\bเลขที่\b/g, "ไม่")
+                .replace(/\bลำดับที่\b/g, "ไม่ใช่")
+                .replace(/เลขที่\s*!/g, "ไม่นะ!")
+                .replace(/เลขที่\s*\./g, "ไม่.")
+                .replace(/เลขที่\s*\.\.\./g, "ไม่นะ...")
+                .replace(/พระเจ้าร่วมเพศพระคริสต์/g, "ให้ตายเถอะวะ")
+                .replace(/พระเจ้าร่วมเพศ/g, "คุณพระช่วย")
+                .replace(/พระเยซูคริสต์/g, "พระเจ้า")
+                .replace(/พระเยซู/g, "พระเจ้า")
+                .replace(/โอ้ ไม่/g, "แย่แล้ว")
+                .replace(/ฉันเดาว่าไม่/g, "คงไม่ใช่หรอก")
+                .replace(/คุณรู้อะไรไหม/g, "นี่คุณรู้ไหม")
+                .replace(/ถูกต้อง/g, "ใช่เลย");
+        }
+
+        function googleContextualFlowFix(originalText, translatedText, blockGender) {
+            let cleanOrig = originalText.trim().toLowerCase().replace(/[!,.]/g, ''); 
+            let finalResult = cleanThaiSubtitleBugs(translatedText.trim());
+
+            // --- [ระบบจูนอรรถรสคำสบถและแสลงหนัง - Cinematic Slang Matrix] ---
+            // ดักจับคำแปลที่ Google API มักจะแปลออกมาสุภาพหรือทื่อเกินไป โดยอิงจากคำอังกฤษต้นฉบับ
+            if (cleanOrig === "shit" || cleanOrig === "oh shit") {
+                if (originalText.includes("!")) return "เชี่ยเอ๊ย!";
+                return "แม่งเอ๊ย";
+            }
+            if (cleanOrig.includes("holy shit")) return "ฉิบหายแล้ว!";
+            if (cleanOrig.includes("piece of shit")) return "ไอ้เศษสวะเอ๊ย";
+            if (cleanOrig.includes("bullshit")) return "ตอแหลทั้งนั้น";
+            if (cleanOrig.includes("bitch")) return "ยัยตัวแสบ";
+            if (cleanOrig.includes("asshole")) return "ไอ้สารเลว";
+
+            // บริบทคำสบถ/อุทานทั่วไป
+            if (/^no\s+no\s+no/i.test(cleanOrig)) return "ไม่ ไม่ ไม่...";
+            if (/^no\s+no/i.test(cleanOrig)) return "ไม่ ไม่...";
+            if (cleanOrig.includes("jesus fucking christ")) return "ให้ตายเถอะวะ!";
+            if (cleanOrig === "no" || cleanOrig === "oh no") {
+                if (originalText.includes("!")) return "ไม่นะ!";
+                if (originalText.includes("...")) return "ไม่นะ...";
+                return "ไม่";
+            }
+            if (cleanOrig === "jesus" || cleanOrig === "jesus christ" || cleanOrig === "oh my god") return "พระเจ้าช่วย!";
+
+            // หาก Google แปลคำว่า shit ในประโยคยาวๆ ออกมาเป็น อึ/ขี้/อุจจาระ แต่ต้นฉบับคือคำอุทาน ให้ดัดแปลงกลับ
+            if (originalText.toLowerCase().includes("shit") && (finalResult.includes("อึ") || finalResult.includes("ขี้") || finalResult.includes("อุจจาระ"))) {
+                // ตรวจสอบว่าไม่ใช่การพูดเรื่องอุจจาระจริงๆ (เช่น สุนัขถ่าย หรือไปห้องน้ำ)
+                if (!cleanOrig.includes("dog") && !cleanOrig.includes("poop") && !cleanOrig.includes("toilet")) {
+                    finalResult = finalResult.replace(/อึ/g, "แม่ง").replace(/ขี้/g, "เฮงซวย").replace(/อุจจาระ/g, "สารเลว");
+                }
+            }
+
+            // ระดับรายบรรทัด (Line-level Check) จากข้อความภาษาอังกฤษเพียวๆ
+            let lineGender = blockGender;
+            if (/\b(sir|man|bro|brother|mister|mr|son|dude|boy)\b/i.test(cleanOrig)) {
+                lineGender = 'male';
+            } else if (/\b(ma'am|lady|madam|miss|mrs|girl|sister|mom|mother|honey)\b/i.test(cleanOrig)) {
+                lineGender = 'female';
+            }
+
+            // ระบบปรับสรรพนามปลายทาง (Post-Processing Client Side)
+            if (lineGender === 'male') {
+                finalResult = finalResult.replace(/ฉัน/g, "ผม").replace(/ดิฉัน/g, "ผม");
+                finalResult = finalResult.replace(/ค่ะ/g, "ครับ").replace(/คะ/g, "ครับ").replace(/นะค่ะ/g, "นะครับ").replace(/นะคะ/g, "นะครับ");
+                if (cleanOrig === "yes sir" || cleanOrig === "yes") {
+                    if(!finalResult.includes("ครับ")) finalResult = "ครับ";
+                }
+            } else if (lineGender === 'female') {
+                finalResult = finalResult.replace(/ผม/g, "ฉัน");
+                finalResult = finalResult.replace(/ครับ/g, "ค่ะ").replace(/นะครับ/g, "นะคะ");
+                if (cleanOrig === "yes" || cleanOrig === "yes ma'am") {
+                    if(!finalResult.includes("ค่ะ")) finalResult = "ค่ะ";
+                }
+            }
+
+            if (cleanOrig.includes("i think no") || cleanOrig.includes("probably no")) return "ฉันว่าไม่ใช่นะ";
+            if (cleanOrig.includes("hell no") || cleanOrig.includes("no way")) return "ไม่มีทาง!";
+            if (cleanOrig.includes("what the hell") || cleanOrig.includes("what the fuck")) return "อะไรกันวะเนี่ย!";
+
+            return finalResult;
+        }
+
+        async function fetchTranslationBatch(textArray, targetLang, engine, apiKey) {
+            try {
+                if (engine === 'google_v2') {
+                    let maleScore = 0;
+                    let femaleScore = 0;
+                    textArray.forEach(t => {
+                        let low = t.toLowerCase();
+                        if (/\b(sir|man|bro|brother|mister|mr|son|dude|boy|he|him|his)\b/i.test(low)) maleScore++;
+                        if (/\b(ma'am|lady|madam|miss|mrs|girl|sister|mom|mother|honey|she|her)\b/i.test(low)) femaleScore++;
+                    });
+
+                    let blockGender = 'neutral';
+                    if (maleScore > femaleScore && maleScore > 0) blockGender = 'male';
+                    if (femaleScore > maleScore && femaleScore > 0) blockGender = 'female';
+
+                    let translatedRaw = [];
+                    let cleanOriginalTexts = textArray.map(t => t.trim() || ' ');
+
+                    if (apiKey) {
+                        let params = new URLSearchParams({ key: apiKey, target: targetLang, format: 'text' });
+                        cleanOriginalTexts.forEach(t => params.append('q', t));
+                        const res = await fetch(`https://translation.googleapis.com/language/translate/v2?${params.toString()}`, { method: 'POST' });
+                        const data = await res.json();
+                        translatedRaw = data.data.translations.map(t => t.translatedText);
+                    } 
+                    else {
+                        const promises = cleanOriginalTexts.map(async (t) => {
+                            if (!t.trim()) return "";
+                            let encodedText = encodeURIComponent(t);
+                            let url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetLang}&dt=t&q=${encodedText}`;
+                            const res = await fetch(url);
+                            const data = await res.json();
+                            if (data && data[0]) return data[0].map(x => x[0]).join('');
+                            return t;
+                        });
+                        translatedRaw = await Promise.all(promises);
+                    }
+                    
+                    return translatedRaw.map((t, idx) => {
+                        return googleContextualFlowFix(textArray[idx], t, blockGender);
+                    });
+                    
+                } else {
+                    if (!apiKey) { alert('Engine OpenAI จำเป็นต้องใช้ API Key ครับ'); return textArray; }
+                    const combined = textArray.map((t, i) => `## Subtitle Line [${i}]: ${t}`).join('\n');
+                    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+                        body: JSON.stringify({
+                            model: 'gpt-4o',
+                            messages: [
+                                { role: 'system', content: `You are an elite movie subtitle translator. Translate naturally into Thai. Keep format '## Subtitle Line [X]:' exactly.` }, 
+                                { role: 'user', content: `Translate to ${targetLang}:\n${combined}` }
+                            ],
+                            temperature: 0.3
+                        })
+                    });
+                    const data = await res.json();
+                    let results = new Array(textArray.length).fill("");
+                    data.choices[0].message.content.split('\n').forEach(line => {
+                        const match = line.match(/^##\s*Subtitle\s*line\s*\[(\d+)\]:\s*(.*)/i);
+                        if(match) results[parseInt(match[1])] = cleanThaiSubtitleBugs(match[2]);
+                    });
+                    for(let i=0; i<textArray.length; i++) {
+                        if(!results[i]) results[i] = cleanThaiSubtitleBugs(textArray[i]);
+                    }
+                    return results;
+                }
+            } catch(e) { 
+                console.error(e);
+                return textArray.map(t => cleanThaiSubtitleBugs(t)); 
+            }
+        }
+
+        btnTranslate.addEventListener('click', async () => {
+            const key = document.getElementById('apiKey').value.trim();
+            const engine = document.getElementById('apiEngine').value;
+            
+            btnTranslate.setAttribute('disabled', 'true');
+            btnTranslate.classList.remove('active');
+            
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const lines = (fileExtension === 'srt' || fileExtension === 'vtt') ? e.target.result.split(/\r?\n\r?\n/) : e.target.result.split(/\r?\n/);
+                let finalBlocks = [];
+                let batchSize = key ? 40 : 20; 
+                
+                for (let i = 0; i < lines.length; i += batchSize) {
+                    let batch = lines.slice(i, i + batchSize);
+                    let textArray = [], meta = [];
+                    
+                    batch.forEach(b => {
+                        let trimmed = b.trim();
+                        if(!trimmed) {
+                            meta.push({ type: 'empty' });
+                        } else if((fileExtension === 'srt' || fileExtension === 'vtt') && trimmed.split(/\r?\n/).length >= 3) {
+                            let l = trimmed.split(/\r?\n/);
+                            meta.push({ type: 'sub', header: l[0], time: l[1] });
+                            textArray.push(l.slice(2).join(' '));
+                        } else if(fileExtension === 'ass' || fileExtension === 'ssa') {
+                            if (trimmed.startsWith('Dialogue:')) {
+                                let parts = trimmed.split(',');
+                                meta.push({ type: 'ass_dialogue', prefix: parts.slice(0, 9).join(',') });
+                                textArray.push(parts.slice(9).join(','));
+                            } else {
+                                meta.push({ type: 'raw', content: b });
+                            }
+                        } else { 
+                            meta.push({ type: 'raw', content: b }); 
+                        }
+                    });
+                    
+                    let translated = await fetchTranslationBatch(textArray, document.getElementById('targetLang').value, engine, key);
+                    let tIdx = 0;
+                    
+                    meta.forEach(m => {
+                        if(m.type === 'sub') finalBlocks.push(`${m.header}\n${m.time}\n${translated[tIdx++]}`);
+                        else if(m.type === 'ass_dialogue') finalBlocks.push(`${m.prefix},${translated[tIdx++]}`);
+                        else if(m.type === 'empty') finalBlocks.push("");
+                        else finalBlocks.push(m.content);
+                    });
+                    
+                    let pct = Math.min(Math.floor(((i + batch.length) / lines.length) * 100), 100);
+                    progressBarFill.style.width = pct + '%';
+                    percentageText.textContent = pct + '%';
+                    statusText.textContent = `⏳ Translating lines ${i + batch.length} / ${lines.length}...`;
+                }
+                
+                let finalContent = (fileExtension === 'srt' || fileExtension === 'vtt') ? finalBlocks.join('\n\n') : finalBlocks.join('\n');
+                
+                let splitLines = finalContent.split('\n');
+                let cleanLines = splitLines.map(line => cleanThaiSubtitleBugs(line));
+                finalContent = cleanLines.join('\n');
+
+                const blob = new Blob([finalContent], { type: "text/plain;charset=utf-8" });
+                saveAs(blob, selectedFile.name.replace(/\.[^/.]+$/, "") + "." + document.getElementById('targetLang').value + "." + fileExtension);
+                
+                statusText.textContent = "✅ Completed!";
+                percentageText.textContent = "Completed!";
+                btnTranslate.removeAttribute('disabled');
+                btnTranslate.classList.add('active');
+            };
+            reader.readAsText(selectedFile);
+        });
+    </script>
+</body>
+</html>
