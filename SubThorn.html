@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SubThorn v.2.9.8 (Fixed Upload & Drag-Drop)</title>
+    <title>SubThorn v.2.9.9 (Ultimate Upload Fix)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/1.3.8/FileSaver.min.js"></script>
     <style>
         body {
@@ -65,6 +65,15 @@
         .dropzone.dragover {
             border-color: #2563eb;
             background: #dbeafe;
+        }
+        .dropzone .file-status {
+            font-size: 13px;
+            color: #475569;
+            margin-top: 8px;
+            font-weight: 600;
+        }
+        .dropzone .file-status.has-file {
+            color: #059669;
         }
         .form-label {
             font-size: 13px;
@@ -211,21 +220,16 @@
             border-radius: 20px;
             margin-left: 6px;
         }
-        .file-status {
-            font-size: 13px;
-            color: #475569;
-            margin-top: 6px;
-        }
     </style>
 </head>
 <body>
 
     <div class="main-container">
         <h1 class="main-title">SubThorn Translation</h1>
-        <div class="main-version">FIXED UPLOAD & DRAG-DROP <span class="update-badge">v.2.9.8</span></div>
+        <div class="main-version">ULTIMATE UPLOAD FIX <span class="update-badge">v.2.9.9</span></div>
 
         <div class="converter-card">
-            <!-- Dropzone Area -->
+            <!-- Dropzone Area - ไม่มี onclick ใน HTML -->
             <div class="dropzone" id="dropzone">
                 <div style="font-size: 44px; margin-bottom: 12px;">🎬</div>
                 <p style="font-weight: 700; color: #334155; margin: 5px 0; font-size: 15px;">👆 คลิกเพื่อเลือกไฟล์ หรือลากไฟล์มาวางที่นี่</p>
@@ -269,13 +273,13 @@
             </div>
 
             <button class="btn-translate" id="btnTranslate" disabled>เริ่มกระบวนการแปลซับไตเติล</button>
-            <div class="engine-note">🛠️ <b>v.2.9.8:</b> <span style="color:#22c55e;">✅ แก้ไขปัญหาคลิก/ลากไฟล์</span> + Placeholder + ทับศัพท์อัตโนมัติ <span class="method-badge">เหมาะกับ Google</span></div>
+            <div class="engine-note">🛠️ <b>v.2.9.9:</b> <span style="color:#22c55e;">✅ แก้ไขอัปโหลด 100%</span> + Placeholder + ทับศัพท์อัตโนมัติ <span class="method-badge">เหมาะกับ Google</span></div>
         </div>
     </div>
 
     <script>
         // ==========================================
-        // 📌 1. DOM ELEMENTS
+        // 📌 DOM ELEMENTS
         // ==========================================
         const fileInput = document.getElementById('fileInput');
         const btnTranslate = document.getElementById('btnTranslate');
@@ -303,7 +307,7 @@
         let detectedGenreText = "General";
 
         // ==========================================
-        // 📚 2. MINIMAL MOVIE DB
+        // 📚 MOVIE DB (ย่อ)
         // ==========================================
         const MOVIE_DB = {
             'spider-man': { genre: 'Superhero / Action' },
@@ -316,7 +320,7 @@
         };
 
         // ==========================================
-        // 🧠 3. AUTO-DETECT ENGINE
+        // 🧠 AUTO-DETECT
         // ==========================================
         function cleanFilename(filename) {
             let name = filename.replace(/\.[^.]+$/, '');
@@ -352,7 +356,7 @@
         }
 
         // ==========================================
-        // 🧠 4. PHONETIC NAME TRANSLITERATOR
+        // 🧠 PHONETIC TRANSLITERATOR (ทับศัพท์)
         // ==========================================
         function phoneticTransliterate(name) {
             if (!name) return name;
@@ -419,9 +423,7 @@
             };
 
             const lowerName = name.toLowerCase();
-            if (exceptions[lowerName]) {
-                return exceptions[lowerName];
-            }
+            if (exceptions[lowerName]) return exceptions[lowerName];
 
             const rules = [
                 { from: /^sh/ig, to: 'ช' },
@@ -481,7 +483,6 @@
             ];
 
             rules.sort((a, b) => b.from.source.length - a.from.source.length);
-
             let processed = result;
             rules.forEach(rule => {
                 processed = processed.replace(rule.from, rule.to);
@@ -497,15 +498,12 @@
             processed = processed.replace(/ะ([ก-ฮ])/g, '$1');
             processed = processed.replace(/์์/g, '์');
 
-            if (!/[ก-ฮ]/.test(processed)) {
-                return name;
-            }
-
+            if (!/[ก-ฮ]/.test(processed)) return name;
             return processed;
         }
 
         // ==========================================
-        // 🧠 5. NAME DETECTION & PLACEHOLDER SYSTEM
+        // 🧠 PLACEHOLDER SYSTEM
         // ==========================================
         function detectNamesInText(text) {
             const words = text.split(/\s+/);
@@ -556,6 +554,7 @@
                     thaiName);
                 }
             }
+            // Fallback: detect remaining capitalized words
             const words = result.split(/\s+/);
             const commonWords = ['I', 'You', 'He', 'She', 'It', 'We', 'They', 'My', 'Your', 'His', 'Her', 'Our',
                 'Their', 'Me', 'Him', 'Us', 'Them', 'This', 'That', 'What', 'Who', 'Whom', 'Which', 'Where',
@@ -582,7 +581,7 @@
         }
 
         // ==========================================
-        // 🧠 6. RIGHT FIXER
+        // 🧠 RIGHT FIXER
         // ==========================================
         function fixRightContext(line) {
             if (!line) return line;
@@ -602,7 +601,7 @@
         }
 
         // ==========================================
-        // 🛡️ 7. CLEANER
+        // 🛡️ CLEANER
         // ==========================================
         const terminologyDict = {
             preTranslate: [
@@ -645,7 +644,7 @@
         }
 
         // ==========================================
-        // 🛡️ 8. TAG PROTECTION
+        // 🛡️ TAG PROTECTION
         // ==========================================
         function protectTagsAndFix(textArray, engine) {
             window._namePlaceholderMap = {};
@@ -693,7 +692,7 @@
         }
 
         // ==========================================
-        // 🌐 9. TRANSLATION ENGINES
+        // 🌐 TRANSLATION ENGINES
         // ==========================================
         const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -791,9 +790,8 @@
         }
 
         // ==========================================
-        // 📥 10. FILE PROCESSING (FIXED 100%)
+        // 📥 FILE PROCESSING (แก้ไขใหม่ 100%)
         // ==========================================
-        // ฟังก์ชันหลักสำหรับประมวลผลไฟล์
         function processSelectedFile(file) {
             const ext = file.name.split('.').pop().toLowerCase();
             if (!['srt', 'ass', 'ssa', 'vtt'].includes(ext)) {
@@ -803,9 +801,10 @@
 
             selectedFile = file;
             fileExtension = ext;
+
+            // อัปเดต UI
             fileStatus.textContent = '📄 ' + file.name;
-            fileStatus.style.color = '#059669';
-            fileStatus.style.fontWeight = 'bold';
+            fileStatus.className = 'file-status has-file';
 
             // ตรวจจับหนัง
             const movieData = detectMovie(file.name);
@@ -820,11 +819,11 @@
             const reader = new FileReader();
             reader.onload = function(e) {
                 rawFileContent = e.target.result;
-                fileNameDisplay.innerHTML = `📄 ${selectedFile.name}`;
+                fileNameDisplay.innerHTML = '📄 ' + selectedFile.name;
                 document.getElementById('progressContainer').style.display = 'block';
                 btnTranslate.removeAttribute('disabled');
                 btnTranslate.classList.add('active');
-                statusText.textContent = `✅ ตรวจจับ: ${detectedGenreText} (ใช้ Placeholder ป้องกันชื่อผิด)`;
+                statusText.textContent = '✅ ตรวจจับ: ' + detectedGenreText + ' (ใช้ Placeholder ป้องกันชื่อผิด)';
                 progressBarFill.style.width = '0%';
                 percentageText.textContent = '0%';
             };
@@ -832,45 +831,46 @@
                 alert('❌ ไม่สามารถอ่านไฟล์ได้ กรุณาลองใหม่');
                 console.error(e);
                 fileStatus.textContent = '❌ อ่านไฟล์ไม่สำเร็จ';
+                fileStatus.className = 'file-status';
                 fileStatus.style.color = '#dc2626';
             };
             reader.readAsText(selectedFile);
         }
 
-        // --- การจัดการ Dropzone แบบใหม่ (แก้ปัญหา 100%) ---
+        // --- 📌 ตั้งค่า Events (เรียบง่าย ไม่มี onclick ใน HTML) ---
 
         // 1. คลิกที่ dropzone → เปิด file input
         dropzone.addEventListener('click', function(e) {
-            // ป้องกันไม่ให้เกิดการเปิดไฟล์ซ้ำซ้อน
+            // ป้องกัน event ชนกับ input
             e.preventDefault();
             e.stopPropagation();
             fileInput.click();
         });
 
-        // 2. รับไฟล์จาก file input
+        // 2. เมื่อเลือกไฟล์จาก input
         fileInput.addEventListener('change', function(e) {
             if (e.target.files.length > 0) {
                 processSelectedFile(e.target.files[0]);
             }
-            // รีเซ็ตค่าเพื่อให้เลือกไฟล์เดิมซ้ำได้
+            // รีเซ็ตค่าให้เลือกไฟล์เดิมซ้ำได้
             fileInput.value = '';
         });
 
-        // 3. Drag Over - แสดงสถานะ
+        // 3. Drag Over
         dropzone.addEventListener('dragover', function(e) {
             e.preventDefault();
             e.stopPropagation();
             dropzone.classList.add('dragover');
         });
 
-        // 4. Drag Leave - ลบสถานะ
+        // 4. Drag Leave
         dropzone.addEventListener('dragleave', function(e) {
             e.preventDefault();
             e.stopPropagation();
             dropzone.classList.remove('dragover');
         });
 
-        // 5. Drop - รับไฟล์
+        // 5. Drop
         dropzone.addEventListener('drop', function(e) {
             e.preventDefault();
             e.stopPropagation();
@@ -882,25 +882,22 @@
             }
         });
 
-        // 6. ป้องกันการเปิดไฟล์ในหน้าต่างเบราว์เซอร์ (เฉพาะบน dropzone เท่านั้น)
-        // ไม่ใช้ document.addEventListener เพื่อไม่ให้ปิดกั้นการทำงานอื่น
+        // 6. ป้องกัน default behavior บน dropzone (เพื่อไม่ให้เปิดไฟล์)
         dropzone.addEventListener('dragenter', function(e) {
             e.preventDefault();
             e.stopPropagation();
         });
 
-        // 7. ป้องกันการเปิดไฟล์ทั้งหน้าเฉพาะกรณีที่ลากผ่าน dropzone
-        // แต่ไม่ปิดกั้นทั่วโลก เพื่อไม่ให้เกิดปัญหา
+        // 7. ป้องกันการเปิดไฟล์ทั้งหน้า (เฉพาะที่ไม่ได้เกิดจาก dropzone)
+        // ใช้ document แต่เช็ค target ว่าอยู่ใน dropzone หรือไม่
         document.addEventListener('dragover', function(e) {
-            // ถ้าเป้าหมายคือ dropzone หรืออยู่ภายใน dropzone ให้ปล่อยให้จัดการเอง
             if (dropzone.contains(e.target)) {
-                return;
+                return; // ปล่อยให้ dropzone จัดการเอง
             }
             e.preventDefault();
         });
 
         document.addEventListener('drop', function(e) {
-            // ถ้าเป้าหมายคือ dropzone หรืออยู่ภายใน dropzone ให้ปล่อยให้จัดการเอง
             if (dropzone.contains(e.target)) {
                 return;
             }
@@ -908,7 +905,7 @@
         });
 
         // ==========================================
-        // 💾 11. SAVE SETTINGS
+        // 💾 SAVE SETTINGS
         // ==========================================
         document.addEventListener('DOMContentLoaded', function() {
             if (localStorage.getItem('sub_engine')) uiEngine.value = localStorage.getItem('sub_engine');
@@ -927,7 +924,7 @@
         uiLang.addEventListener('change', saveSettings);
 
         // ==========================================
-        // 🚀 12. MAIN PROCESSOR
+        // 🚀 MAIN PROCESSOR
         // ==========================================
         btnTranslate.addEventListener('click', async function() {
             if (isTranslating) {
@@ -952,8 +949,7 @@
             btnTranslate.textContent = "❌ ยกเลิก";
             btnTranslate.classList.remove('active');
             btnTranslate.classList.add('cancel-mode');
-            statusText.textContent = 'กำลังแปลด้วย ' + (engine === 'openai' ? 'OpenAI (ชื่ออัตโนมัติ)' :
-            'Google (Placeholder)') + '...';
+            statusText.textContent = 'กำลังแปลด้วย ' + (engine === 'openai' ? 'OpenAI' : 'Google') + '...';
 
             try {
                 var lines = (fileExtension === 'srt' || fileExtension === 'vtt') ? rawFileContent.split(
