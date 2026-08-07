@@ -3,755 +3,855 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SubThorn v.2.9.0 (Tag & Line-Break Preservation Edition)</title>
-    <!-- โหลดไลบรารี FileSaver.js สำหรับบันทึกไฟล์ลงเครื่องคอมพิวเตอร์ -->
+    <title>SubThorn v.2.9.4 (Auto-Detect Movie from Filename)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/1.3.8/FileSaver.min.js"></script>
     <style>
-        /* ==========================================
-           🎨 GLOBAL & RESPONSIVE STYLES (ธีม Dark Modern)
-           ========================================== */
-        body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            background: radial-gradient(circle at center, #0f172a 0%, #020617 100%); 
-            color: #f8fafc; 
-            margin: 0; 
-            padding: 0; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            min-height: 100vh; 
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
+            color: #f8fafc;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
         }
-        
-        .main-container { 
-            max-width: 650px; 
-            width: 100%; 
-            text-align: center; 
-            padding: 20px; 
-            box-sizing: border-box; 
+        .main-container {
+            max-width: 650px;
+            width: 100%;
+            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
         }
-        
-        .main-title { 
-            font-family: "Georgia", serif; 
-            font-size: clamp(32px, 5vw, 46px); 
-            margin: 0 0 5px 0; 
-            color: #38bdf8; 
-            text-shadow: 0 0 20px rgba(56, 189, 248, 0.2); 
+        .main-title {
+            font-family: "Georgia", serif;
+            font-size: clamp(32px, 5vw, 46px);
+            margin: 0 0 5px 0;
+            color: #38bdf8;
+            text-shadow: 0 0 20px rgba(56, 189, 248, 0.2);
         }
-        
-        .main-version { 
-            font-size: 13px; 
-            color: #0ea5e9; 
-            font-weight: bold; 
-            margin-bottom: 25px; 
-            letter-spacing: 2px; 
+        .main-version {
+            font-size: 13px;
+            color: #0ea5e9;
+            font-weight: bold;
+            margin-bottom: 25px;
+            letter-spacing: 2px;
         }
-        
-        .converter-card { 
-            background: #ffffff; 
-            color: #1e293b; 
-            border-radius: 20px; 
-            padding: clamp(20px, 4vw, 35px); 
-            box-shadow: 0 20px 40px rgba(0,0,0,0.6); 
-            text-align: left; 
+        .converter-card {
+            background: #ffffff;
+            color: #1e293b;
+            border-radius: 20px;
+            padding: clamp(20px, 4vw, 35px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+            text-align: left;
         }
-        
-        /* Dropzone พื้นที่สำหรับลากและวางไฟล์ */
-        .dropzone { 
-            border: 2px dashed #38bdf8; 
-            background: #f8fafc; 
-            border-radius: 14px; 
-            padding: 40px 15px; 
-            text-align: center; 
-            cursor: pointer; 
-            transition: all 0.25s ease; 
-            margin-bottom: 20px; 
+        .dropzone {
+            border: 2px dashed #38bdf8;
+            background: #f8fafc;
+            border-radius: 14px;
+            padding: 40px 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            margin-bottom: 20px;
         }
-        
-        .dropzone:hover { 
-            border-color: #2563eb; 
-            background: #f0f9ff; 
+        .dropzone:hover {
+            border-color: #2563eb;
+            background: #f0f9ff;
         }
-        
-        /* ฟอร์มและช่องกรอกข้อมูล */
-        .form-label { 
-            font-size: 13px; 
-            color: #475569; 
-            font-weight: 700; 
-            margin-top: 18px; 
-            margin-bottom: 8px; 
-            display: flex; 
-            align-items: center; 
-            gap: 6px; 
+        .form-label {
+            font-size: 13px;
+            color: #475569;
+            font-weight: 700;
+            margin-top: 18px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
             text-transform: uppercase;
         }
-        
-        .select-input, .text-input { 
-            width: 100%; 
-            padding: 14px 16px; 
-            border: 1px solid #cbd5e1; 
-            border-radius: 10px; 
-            background: #f1f5f9; 
-            box-sizing: border-box; 
-            outline: none; 
-            font-size: 15px; 
-            transition: all 0.2s; 
+        .form-label .hint {
+            font-weight: 400;
+            color: #64748b;
+            text-transform: none;
+            font-size: 12px;
         }
-        
-        .select-input:focus, .text-input:focus { 
-            border-color: #38bdf8; 
-            background: #ffffff; 
-            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15); 
+        .select-input, .text-input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            background: #f1f5f9;
+            box-sizing: border-box;
+            outline: none;
+            font-size: 15px;
+            transition: all 0.2s;
         }
-        
-        /* Progress Bar และการแสดงผลสถานะ */
-        .progress-container { 
-            margin-top: 25px; 
-            display: none; 
-            background: #f8fafc; 
-            padding: 15px; 
-            border-radius: 10px; 
-            border: 1px solid #e2e8f0; 
+        .select-input:focus, .text-input:focus {
+            border-color: #38bdf8;
+            background: #ffffff;
+            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15);
         }
-        
-        .file-name-info { 
-            font-size: 13px; 
-            color: #0284c7; 
-            font-weight: bold; 
-            margin-bottom: 10px; 
-            word-break: break-all; 
+        .detection-status {
+            background: #f0fdf4;
+            border: 1px solid #86efac;
+            border-radius: 10px;
+            padding: 12px 16px;
+            margin-top: 12px;
+            font-size: 14px;
+            color: #166534;
+            display: none;
+            align-items: center;
+            gap: 8px;
         }
-        
-        .progress-bar-bg { 
-            width: 100%; 
-            background-color: #e2e8f0; 
-            border-radius: 10px; 
-            height: 10px; 
-            overflow: hidden; 
-            margin-top: 8px; 
+        .detection-status .badge {
+            background: #22c55e;
+            color: #fff;
+            font-weight: bold;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 11px;
         }
-        
-        .progress-bar-fill { 
-            width: 0%; 
-            height: 100%; 
-            background: linear-gradient(90deg, #38bdf8, #2563eb); 
-            transition: width 0.2s ease; 
+        .progress-container {
+            margin-top: 25px;
+            display: none;
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
         }
-        
-        /* ปุ่มเริ่มแปลภาษา / ปุ่มยกเลิก */
-        .btn-translate { 
-            width: 100%; 
-            background: #e2e8f0; 
-            color: #94a3b8; 
-            border: none; 
-            padding: 18px; 
-            border-radius: 30px; 
-            font-weight: bold; 
-            font-size: 16px; 
-            margin-top: 25px; 
-            cursor: not-allowed; 
-            transition: all 0.3s ease; 
+        .file-name-info {
+            font-size: 13px;
+            color: #0284c7;
+            font-weight: bold;
+            margin-bottom: 10px;
+            word-break: break-all;
         }
-        
-        .btn-translate.active { 
-            background: linear-gradient(135deg, #38bdf8 0%, #2563eb 100%); 
-            color: #ffffff; 
-            cursor: pointer; 
-            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3); 
+        .progress-bar-bg {
+            width: 100%;
+            background-color: #e2e8f0;
+            border-radius: 10px;
+            height: 10px;
+            overflow: hidden;
+            margin-top: 8px;
         }
-        
-        .btn-translate.active:hover { 
-            transform: translateY(-2px); 
-            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4); 
+        .progress-bar-fill {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #38bdf8, #2563eb);
+            transition: width 0.2s ease;
         }
-
+        .btn-translate {
+            width: 100%;
+            background: #e2e8f0;
+            color: #94a3b8;
+            border: none;
+            padding: 18px;
+            border-radius: 30px;
+            font-weight: bold;
+            font-size: 16px;
+            margin-top: 25px;
+            cursor: not-allowed;
+            transition: all 0.3s ease;
+        }
+        .btn-translate.active {
+            background: linear-gradient(135deg, #38bdf8 0%, #2563eb 100%);
+            color: #ffffff;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+        }
+        .btn-translate.active:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+        }
         .btn-translate.cancel-mode {
             background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%) !important;
             color: #ffffff !important;
             cursor: pointer !important;
             box-shadow: 0 4px 15px rgba(225, 29, 72, 0.3) !important;
         }
-
         .btn-translate.cancel-mode:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(225, 29, 72, 0.4) !important;
         }
-        
-        .engine-note { 
-            font-size: 12px; 
-            color: #64748b; 
-            margin-top: 15px; 
-            text-align: center; 
-            line-height: 1.5; 
+        .engine-note {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 15px;
+            text-align: center;
+            line-height: 1.5;
+        }
+        .update-badge {
+            display: inline-block;
+            background: #22c55e;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 12px;
+            border-radius: 20px;
+            margin-left: 8px;
+            letter-spacing: 0.5px;
+        }
+        .hint-text {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 4px;
+        }
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #22c55e;
+            margin-right: 6px;
         }
     </style>
 </head>
 <body>
 
-    <div class="main-container">
-        <h1 class="main-title">SubThorn Translation</h1>
-        <div class="main-version">TAG & MULTI-LINE PRESERVATION EDITION v.2.9.0</div>
-        
-        <div class="converter-card">
-            <!-- Dropzone Area -->
-            <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
-                <div style="font-size: 44px; margin-bottom: 12px;">🎬</div>
-                <p style="font-weight: 700; color: #334155; margin: 5px 0; font-size: 15px;">แตะเลือกไฟล์ หรือลากไฟล์มาวางที่นี่</p>
-                <p style="font-size: 13px; color: #64748b; margin: 5px 0 0 0;">รองรับ .srt, .ass, .ssa, .vtt</p>
-                <input type="file" id="fileInput" accept=".srt,.ass,.ssa,.vtt" style="display:none;">
-            </div>
+<div class="main-container">
+    <h1 class="main-title">SubThorn Translation</h1>
+    <div class="main-version">AUTO-DETECT MOVIE EDITION <span class="update-badge">v.2.9.4</span></div>
 
-            <!-- เลือก AI Engine -->
-            <label class="form-label">🤖 เครื่องมือแปลภาษา (Translation Engine)</label>
-            <select class="select-input" id="apiEngine">
-                <option value="google_free" selected>Google Translate v.2 API / (Free)</option>
-                <option value="openai">OpenAI API GPT-4o</option>
-            </select>
-
-            <!-- ช่องใส่ API Key -->
-            <label class="form-label">🔑 API Key (เว้นว่างไว้ได้ หากใช้ Google Free)</label>
-            <input type="password" class="text-input" id="apiKey" placeholder="กรอก API Key หากใช้โหมด OpenAI หรือ Google แบบเสียเงิน">
-
-            <!-- ภาษาเป้าหมาย -->
-            <label class="form-label">🎯 แปลงเป็นภาษา</label>
-            <select class="select-input" id="targetLang">
-                <option value="th" selected>Thai (ภาษาไทย)</option>
-                <option value="en">English (ภาษาอังกฤษ)</option>
-            </select>
-
-            <!-- ความคืบหน้า Progress Container -->
-            <div class="progress-container" id="progressContainer">
-                <div class="file-name-info" id="fileNameDisplay"></div>
-                <div style="display:flex; justify-content: space-between; font-size:13px; font-weight:700; color:#334155;">
-                    <span id="statusText">เตรียมความพร้อม...</span>
-                    <span id="percentageText">0%</span>
-                </div>
-                <div class="progress-bar-bg">
-                    <div class="progress-bar-fill" id="progressBarFill"></div>
-                </div>
-            </div>
-
-            <!-- ปุ่มคำสั่งแปล / ยกเลิก -->
-            <button class="btn-translate" id="btnTranslate" disabled>เริ่มกระบวนการแปลซับไตเติล</button>
-            <div class="engine-note">🛠️ <b>v.2.9.0:</b> Tag Protection (<i>, &lt;br&gt;, {\pos}) + Line-Break Preservation + Deep Auto-Clean</div>
+    <div class="converter-card">
+        <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+            <div style="font-size: 44px; margin-bottom: 12px;">🎬</div>
+            <p style="font-weight: 700; color: #334155; margin: 5px 0; font-size: 15px;">แตะเลือกไฟล์ หรือลากไฟล์มาวางที่นี่</p>
+            <p style="font-size: 13px; color: #64748b; margin: 5px 0 0 0;">รองรับ .srt, .ass, .ssa, .vtt</p>
+            <input type="file" id="fileInput" accept=".srt,.ass,.ssa,.vtt" style="display:none;">
         </div>
+
+        <!-- 🔥 สถานะการตรวจจับหนังอัตโนมัติ -->
+        <div class="detection-status" id="detectionStatus">
+            <span>🎯 ระบบตรวจจับ:</span>
+            <span id="detectedMovieName" style="font-weight:bold;">-</span>
+            <span class="badge" id="detectedGenre">-</span>
+            <span style="font-size:12px; color:#475569; margin-left:auto;" id="detectedCharCount">0 ตัวละคร</span>
+        </div>
+
+        <label class="form-label">🤖 เครื่องมือแปลภาษา</label>
+        <select class="select-input" id="apiEngine">
+            <option value="google_free" selected>Google Translate v.2 API (Free)</option>
+            <option value="openai">OpenAI API GPT-4o</option>
+        </select>
+
+        <label class="form-label">🔑 API Key (เว้นว่างได้ หากใช้ Google Free)</label>
+        <input type="password" class="text-input" id="apiKey" placeholder="กรอก API Key หากใช้ OpenAI">
+
+        <label class="form-label">🎯 แปลงเป็นภาษา</label>
+        <select class="select-input" id="targetLang">
+            <option value="th" selected>Thai (ภาษาไทย)</option>
+            <option value="en">English (ภาษาอังกฤษ)</option>
+        </select>
+
+        <div class="progress-container" id="progressContainer">
+            <div class="file-name-info" id="fileNameDisplay"></div>
+            <div style="display:flex; justify-content: space-between; font-size:13px; font-weight:700; color:#334155;">
+                <span id="statusText">เตรียมความพร้อม...</span>
+                <span id="percentageText">0%</span>
+            </div>
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill" id="progressBarFill"></div>
+            </div>
+        </div>
+
+        <button class="btn-translate" id="btnTranslate" disabled>เริ่มกระบวนการแปลซับไตเติล</button>
+        <div class="engine-note">🛠️ <b>v.2.9.4:</b> <span style="color:#22c55e;">🧠 Auto-Detect Movie from Filename + Smart Name Mapping + Right Fix</span> (ไม่ต้องกรอกข้อมูลใดๆ ทั้งสิ้น)</div>
     </div>
+</div>
 
-    <script>
-        // ==========================================
-        // 📌 1. DOM ELEMENTS & STATE MANAGEMENT
-        // ==========================================
-        const fileInput = document.getElementById('fileInput');
-        const btnTranslate = document.getElementById('btnTranslate');
-        const progressBarFill = document.getElementById('progressBarFill');
-        const statusText = document.getElementById('statusText');
-        const percentageText = document.getElementById('percentageText');
-        const fileNameDisplay = document.getElementById('fileNameDisplay');
-        const dropzone = document.getElementById('dropzone');
+<script>
+    // ==========================================
+    // 📌 1. DOM ELEMENTS
+    // ==========================================
+    const fileInput = document.getElementById('fileInput');
+    const btnTranslate = document.getElementById('btnTranslate');
+    const progressBarFill = document.getElementById('progressBarFill');
+    const statusText = document.getElementById('statusText');
+    const percentageText = document.getElementById('percentageText');
+    const fileNameDisplay = document.getElementById('fileNameDisplay');
+    const dropzone = document.getElementById('dropzone');
+    const detectionStatus = document.getElementById('detectionStatus');
+    const detectedMovieName = document.getElementById('detectedMovieName');
+    const detectedGenre = document.getElementById('detectedGenre');
+    const detectedCharCount = document.getElementById('detectedCharCount');
+
+    const uiEngine = document.getElementById('apiEngine');
+    const uiKey = document.getElementById('apiKey');
+    const uiLang = document.getElementById('targetLang');
+
+    let selectedFile = null;
+    let fileExtension = 'srt';
+    let rawFileContent = "";
+    let dragCounter = 0;
+    let abortController = null;
+    let isTranslating = false;
+    
+    // เก็บชื่อหนังที่ตรวจจับได้ (ใช้ในการปรับ OpenAI Prompt)
+    let detectedMovieTitle = "Unknown Movie";
+
+    // ==========================================
+    // 📚 2. MOVIE DATABASE (BUILT-IN)
+    // ==========================================
+    const MOVIE_DB = {
+        // --- MARVEL / SUPERHERO ---
+        'spider-man': {
+            genre: 'Superhero / Action',
+            tone: 'natural, modern, friendly, with humor',
+            nameMap: {
+                'jean grey': 'จีน เกรย์', 'jean': 'จีน',
+                'peter parker': 'ปีเตอร์ ปาร์คเกอร์', 'peter': 'ปีเตอร์',
+                'bruce banner': 'บรูซ แบนเนอร์', 'bruce': 'บรูซ', 'banner': 'แบนเนอร์',
+                'tony stark': 'โทนี่ สตาร์ค', 'tony': 'โทนี่', 'stark': 'สตาร์ค',
+                'steve rogers': 'สตีฟ โรเจอร์ส', 'steve': 'สตีฟ', 'rogers': 'โรเจอร์ส',
+                'natasha romanoff': 'นาตาชา โรโมนอฟ', 'natasha': 'นาตาชา', 'romanoff': 'โรโมนอฟ',
+                'frank castle': 'แฟรงค์ คาสเซิล', 'frank': 'แฟรงค์', 'castle': 'คาสเซิล',
+                'mj': 'เอ็มเจ', 'michelle jones': 'มิเชล โจนส์',
+                'ned leeds': 'เน็ด ลีดส์', 'ned': 'เน็ด',
+                'scorpion': 'สกอร์เปียน', 'mac gargan': 'แมค การ์แกน',
+                'damage control': 'หน่วยควบคุมความเสียหาย', 'v-max': 'วี-แม็กซ์',
+                'wanda': 'แวนด้า', 'maximoff': 'แม็กซิมอฟฟ์',
+                'stephen strange': 'สตีเฟน สเตรนจ์', 'strange': 'สเตรนจ์',
+                'nick fury': 'นิค ฟิวรี่', 'fury': 'ฟิวรี่',
+                'thor': 'ธอร์', 'loki': 'โลกิ', 'clint': 'คลินท์', 'barton': 'บาร์ตัน'
+            }
+        },
+        'avengers': {
+            genre: 'Superhero / Action',
+            tone: 'natural, heroic, modern',
+            nameMap: {
+                'tony stark': 'โทนี่ สตาร์ค', 'tony': 'โทนี่',
+                'steve rogers': 'สตีฟ โรเจอร์ส', 'steve': 'สตีฟ',
+                'natasha romanoff': 'นาตาชา โรโมนอฟ', 'natasha': 'นาตาชา',
+                'bruce banner': 'บรูซ แบนเนอร์', 'bruce': 'บรูซ',
+                'thor': 'ธอร์', 'clint': 'คลินท์', 'barton': 'บาร์ตัน',
+                'nick fury': 'นิค ฟิวรี่', 'fury': 'ฟิวรี่',
+                'wanda': 'แวนด้า', 'maximoff': 'แม็กซิมอฟฟ์',
+                'peter parker': 'ปีเตอร์ ปาร์คเกอร์', 'peter': 'ปีเตอร์',
+                'stephen strange': 'สตีเฟน สเตรนจ์', 'strange': 'สเตรนจ์'
+            }
+        },
+        'deadpool': {
+            genre: 'Superhero / Comedy',
+            tone: 'sarcastic, funny, breaking the fourth wall',
+            nameMap: {
+                'wade wilson': 'เวด วิลสัน', 'wade': 'เวด',
+                'deadpool': 'เดดพูล',
+                'vanessa': 'วาเนสซ่า', 'weasel': 'วีเซิล',
+                'colossus': 'โคลอสซัส', 'negasonic': 'เนกาโซนิค'
+            }
+        },
         
-        const uiEngine = document.getElementById('apiEngine');
-        const uiKey = document.getElementById('apiKey');
-        const uiLang = document.getElementById('targetLang');
+        // --- FANTASY / SCI-FI ---
+        'avatar': {
+            genre: 'Sci-Fi / Fantasy',
+            tone: 'epic, spiritual, use "ข้า/เจ้า" for Na\'vi',
+            nameMap: {
+                'jake sully': 'เจค ซัลลี่', 'jake': 'เจค',
+                'ney\'tiri': 'เนย์ติริ', 'neytiri': 'เนย์ติริ',
+                'quaritch': 'ควอริทช์', 'col miles quaritch': 'พันเอก ไมลส์ ควอริทช์',
+                'grace augustine': 'เกรซ ออกัสติน', 'dr grace': 'ดร.เกรซ',
+                'norm spellman': 'นอร์ม สเปลแมน', 'norm': 'นอร์ม',
+                'trudy chacon': 'ทรูดี ชาคอน', 'trudy': 'ทรูดี',
+                'pandora': 'แพนดอร่า', 'eywa': 'ไอวา',
+                'na\'vi': 'นา'วี'
+            }
+        },
+        'star wars': {
+            genre: 'Sci-Fi / Space Opera',
+            tone: 'heroic, dramatic, formal for Jedi',
+            nameMap: {
+                'luke skywalker': 'ลุค สกายวอล์คเกอร์', 'luke': 'ลุค',
+                'han solo': 'ฮาน โซโล', 'han': 'ฮาน',
+                'leia organa': 'เลอา ออร์กานา', 'leia': 'เลอา',
+                'obi-wan kenobi': 'โอไบ-วัน เคโนบี', 'obi-wan': 'โอไบ-วัน',
+                'yoda': 'โยดา', 'darth vader': 'ดาร์ธ เวเดอร์', 'vader': 'เวเดอร์',
+                'emperor palpatine': 'จักรพรรดิพัลพาทีน', 'palpatine': 'พัลพาทีน',
+                'rey': 'เรย์', 'kylo ren': 'ไคโล เรน', 'finn': 'ฟินน์', 'poe': 'โพ'
+            }
+        },
+        
+        // --- HARRY POTTER ---
+        'harry potter': {
+            genre: 'Fantasy / Adventure',
+            tone: 'magical, formal for adults, casual for students',
+            nameMap: {
+                'harry potter': 'แฮร์รี่ พอตเตอร์', 'harry': 'แฮร์รี่',
+                'ron weasley': 'รอน วีสลีย์', 'ron': 'รอน',
+                'hermione granger': 'เฮอร์ไมโอนี่ เกรนเจอร์', 'hermione': 'เฮอร์ไมโอนี่',
+                'dumbledore': 'ดัมเบิลดอร์', 'albus dumbledore': 'อัลบัส ดัมเบิลดอร์',
+                'snape': 'สเนป', 'severus snape': 'เซเวอรัส สเนป',
+                'voldemort': 'โวลเดอมอร์ต', 'lord voldemort': 'ลอร์ดโวลเดอมอร์ต',
+                'hagrid': 'แฮกริด', 'ruby hagrid': 'รูบี้ แฮกริด',
+                'malfoy': 'มัลฟอย', 'draco malfoy': 'แดรโก มัลฟอย',
+                'mcgonagall': 'มักกอนนากัล', 'minerva mcgonagall': 'มิเนอร์วา มักกอนนากัล'
+            }
+        },
+        
+        // --- LORD OF THE RINGS ---
+        'lord of the rings': {
+            genre: 'Epic Fantasy',
+            tone: 'formal, ancient, use "ข้า/ท่าน" for elves and kings',
+            nameMap: {
+                'frodo baggins': 'โฟรโด แบ๊กกิ้นส์', 'frodo': 'โฟรโด',
+                'samwise gamgee': 'แซมไวส์ แกมจี', 'sam': 'แซม',
+                'gandalf': 'แกนดัล์ฟ', 'aragorn': 'อารากอร์น',
+                'legolas': 'เลโกลัส', 'gimli': 'กิมลี',
+                'boromir': 'โบโรมิร์', 'merry': 'เมอร์รี่', 'pippin': 'ปิ๊ปปิ้น',
+                'sauron': 'ซอรอน', 'saruman': 'ซารูมาน',
+                'galadriel': 'กาลาเดรียล', 'elrond': 'เอลรอนด์',
+                'gollum': 'กอลลัม', 'sméagol': 'สมีโกล'
+            }
+        }
+    };
 
-        let selectedFile = null;
-        let fileExtension = 'srt';
-        let rawFileContent = "";
-        let dragCounter = 0;
+    // ==========================================
+    // 🧠 3. AUTO-DETECT ENGINE (จากชื่อไฟล์)
+    // ==========================================
+    function cleanFilename(filename) {
+        let name = filename.replace(/\.[^.]+$/, ''); // ตัดนามสกุล
+        name = name.replace(/\.(1080p|720p|2160p|4k|HD|FHD|BluRay|WEB-DL|WEBRip|x264|x265|HEVC|DD2\.0|DD5\.1|H\.264|H\.265|LMNTRY|goodS|TELESYNC|TS|CAM|HDTS|AC3|AAC|EN|TH|THAI|ENGLISH)/gi, ' ');
+        name = name.replace(/[\.\-_]/g, ' ');
+        name = name.replace(/\s{2,}/g, ' ');
+        name = name.replace(/\d{4}/g, ''); // ตัดปี
+        return name.trim().toLowerCase();
+    }
 
-        let abortController = null;
-        let isTranslating = false;
+    function detectMovie(filename) {
+        const cleanName = cleanFilename(filename);
+        let bestMatch = null;
+        let bestScore = 0;
 
-        // ==========================================
-        // 💾 2. AUTO-SAVE SETTINGS
-        // ==========================================
-        document.addEventListener('DOMContentLoaded', () => {
-            if(localStorage.getItem('sub_engine')) uiEngine.value = localStorage.getItem('sub_engine');
-            if(localStorage.getItem('sub_apikey')) uiKey.value = localStorage.getItem('sub_apikey');
-            if(localStorage.getItem('sub_lang')) uiLang.value = localStorage.getItem('sub_lang');
-        });
-
-        const saveSettings = () => {
-            localStorage.setItem('sub_engine', uiEngine.value);
-            localStorage.setItem('sub_apikey', uiKey.value.trim());
-            localStorage.setItem('sub_lang', uiLang.value);
-        };
-
-        uiEngine.addEventListener('change', saveSettings);
-        uiKey.addEventListener('change', saveSettings);
-        uiKey.addEventListener('input', saveSettings);
-        uiLang.addEventListener('change', saveSettings);
-
-        // ==========================================
-        // 🛡️ 3. DEEP AUTO-SMART PARTICLE & TERM CLEANER
-        // ==========================================
-        const terminologyDict = {
-            preTranslate: [
-                { regex: /^\s*No\.\s*$/ig, replace: "No" }
-            ],
-            postTranslate: [
-                { bad: /^\s*เลขที่\s*([.?!]*)\s*$/g, good: "ไม่$1" },
-                { bad: /^\s*หมายเลข\s*([.?!]*)\s*$/g, good: "ไม่$1" },
-                { bad: /^\s*อันดับที่\s*([.?!]*)\s*$/g, good: "ไม่$1" }
-            ]
-        };
-
-        function autoCleanSubtitleText(text) {
-            if (!text) return text;
-            
-            // ประมวลผลแยกบรรทัด เพื่อป้องกันการลบการตัดขึ้นบรรทัดใหม่เดิม (\n)
-            let lines = text.split('\n');
-            let cleanedLines = lines.map(function(line) {
-                // 1. ดักแก้คำติดกันตรงกลาง เช่น เถอะค่ะ -> เถอะ, นะค่ะ -> นะ, นะคะ -> นะ
-                line = line.replace(/เถอะ\s*ค่ะ/gi, 'เถอะ');
-                line = line.replace(/ได้โปรด\s*ค่ะ/gi, 'ได้โปรด');
-                line = line.replace(/ขอร้องล่ะ\s*ค่ะ/gi, 'ขอร้องล่ะ');
-                line = line.replace(/นะ\s*ค่ะ/gi, 'นะ');
-                line = line.replace(/นะ\s*คะ/gi, 'นะ');
-
-                // 2. ดักลบคำลงท้ายต้นประโยค/คำอุทาน
-                line = line.replace(/^(ไม่|อย่า|หยุด|ได้โปรด|ช่วยด้วย|พระเจ้า|โอ้|แย่ล่ะ)(?:\s*(?:ค่ะ|คะ|ครับ|นะครับ))+([!.]*)/gi, '$1$2');
-                
-                // 3. หากประโยคมีความเป็นเสียงอุทาน/อารมณ์/คำสั่ง (มี ! หรือ ?) ให้กวาดล้างคำลงท้ายหญิงที่ Google ชอบแถมให้ออกทั้งหมด
-                if (line.includes('!') || line.includes('?')) {
-                    line = line.replace(/ค่ะ([!,.?\s]|$)/g, '$1');
-                    line = line.replace(/คะ([!,.?\s]|$)/g, '$1');
-                    line = line.replace(/นะคะ([!,.?\s]|$)/g, '$1');
-                    line = line.replace(/นะค่ะ([!,.?\s]|$)/g, '$1');
+        for (const [key, value] of Object.entries(MOVIE_DB)) {
+            // ตรวจสอบว่าคีย์อยู่ในชื่อไฟล์ที่ทำความสะอาดแล้ว
+            if (cleanName.includes(key)) {
+                // ยิ่งคีย์ยาว = ความแม่นยำสูง
+                const score = key.length;
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestMatch = { key, ...value };
                 }
-                
-                // จัดระเบียบช่องว่างส่วนเกินเฉพาะในบรรทัดนั้นๆ
-                return line.replace(/[ \t]+/g, ' ').trim();
-            });
-
-            return cleanedLines.join('\n');
+            }
         }
 
-        // ==========================================
-        // 🖱️ 4. DRAG & DROP UX PROTECTION
-        // ==========================================
-        window.addEventListener('dragover', (e) => { e.preventDefault(); e.stopPropagation(); });
-        window.addEventListener('drop', (e) => { e.preventDefault(); e.stopPropagation(); });
-
-        dropzone.addEventListener('dragenter', (e) => {
-            e.preventDefault(); e.stopPropagation();
-            dragCounter++;
-            dropzone.style.borderColor = '#2563eb';
-            dropzone.style.background = '#f0f9ff';
-        });
-
-        dropzone.addEventListener('dragover', (e) => { e.preventDefault(); e.stopPropagation(); });
-
-        dropzone.addEventListener('dragleave', (e) => {
-            e.preventDefault(); e.stopPropagation();
-            dragCounter--;
-            if (dragCounter === 0) {
-                dropzone.style.borderColor = '#38bdf8';
-                dropzone.style.background = '#f8fafc';
+        // ถ้าไม่เจอ แต่มีคำว่า spiderman หรือ avengers ให้ fallback
+        if (!bestMatch) {
+            if (cleanName.includes('spider') || cleanName.includes('marvel') || cleanName.includes('avenger')) {
+                bestMatch = MOVIE_DB['spider-man'];
             }
-        });
+        }
 
-        dropzone.addEventListener('drop', (e) => {
-            e.preventDefault(); e.stopPropagation();
-            dragCounter = 0;
+        return bestMatch;
+    }
+
+    // ==========================================
+    // 🔤 4. SMART NAME MAPPING (BUILD FROM DETECTION)
+    // ==========================================
+    let activeNameMap = {};
+
+    function buildFullNameMap() {
+        let fullMap = { ...activeNameMap };
+        // เพิ่มชื่อที่ผู้ใช้กำหนดเอง (ถ้ามี) สามารถเพิ่มในอนาคต
+        return fullMap;
+    }
+
+    function applyNameReplacement(text) {
+        if (!text) return text;
+        const nameMap = buildFullNameMap();
+        let result = text;
+        const sortedKeys = Object.keys(nameMap).sort((a, b) => b.length - a.length);
+        sortedKeys.forEach(key => {
+            const target = nameMap[key];
+            const regex = new RegExp('\\b' + key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'gi');
+            result = result.replace(regex, target);
+        });
+        return result;
+    }
+
+    // ==========================================
+    // 🧠 5. CONTEXT-AWARE "RIGHT" FIXER
+    // ==========================================
+    function fixRightContext(line) {
+        if (!line) return line;
+        if (!line.includes('ขวา')) return line;
+        if (line.includes('ซ้าย')) return line;
+        const directionWords = ['ซ้าย', 'ทิศ', 'ทาง', 'เลี้ยว', 'หัน', 'บ่าย', 'เบี่ยง', 'ข้าง'];
+        if (directionWords.some(w => line.includes(w))) return line;
+        if (/^\s*ขวา\s*(ครับ|ค่ะ)?\s*[.!?]?\s*$/i.test(line)) return line.replace(/ขวา/, 'ใช่');
+        if (/\?.*ขวา/.test(line)) return line.replace(/ขวา/, 'ใช่');
+        if (/(คือ|ว่า|ก็|เลย|นะ)\s*ขวา\s*[.!?]?$/.test(line)) return line.replace(/(คือ|ว่า|ก็|เลย|นะ)\s*ขวา/, '$1 ใช่');
+        const wordCount = line.split(/\s+/).length;
+        if (line.length < 25 && wordCount <= 5 && !line.includes('?') && !line.includes('!')) return line.replace(/ขวา/, 'ใช่');
+        if (/^ขวา\s*[,.]/.test(line)) return line.replace(/ขวา/, 'ใช่');
+        return line;
+    }
+
+    // ==========================================
+    // 🛡️ 6. CLEANER & DICT
+    // ==========================================
+    const terminologyDict = {
+        preTranslate: [{ regex: /^\s*No\.\s*$/ig, replace: "No" }],
+        postTranslate: [
+            { bad: /^\s*เลขที่\s*([.?!]*)\s*$/g, good: "ไม่$1" },
+            { bad: /^\s*หมายเลข\s*([.?!]*)\s*$/g, good: "ไม่$1" },
+            { bad: /^\s*อันดับที่\s*([.?!]*)\s*$/g, good: "ไม่$1" },
+            { bad: /^ขวา$/gi, good: "ใช่" },
+            { bad: /^\s*ขวา\s*[.!?]?$/gi, good: "ใช่" }
+        ]
+    };
+
+    function autoCleanSubtitleText(text) {
+        if (!text) return text;
+        let lines = text.split('\n');
+        let cleanedLines = lines.map(line => {
+            line = line.replace(/เถอะ\s*ค่ะ/gi, 'เถอะ');
+            line = line.replace(/ได้โปรด\s*ค่ะ/gi, 'ได้โปรด');
+            line = line.replace(/ขอร้องล่ะ\s*ค่ะ/gi, 'ขอร้องล่ะ');
+            line = line.replace(/นะ\s*ค่ะ/gi, 'นะ');
+            line = line.replace(/นะ\s*คะ/gi, 'นะ');
+            line = line.replace(/^(ไม่|อย่า|หยุด|ได้โปรด|ช่วยด้วย|พระเจ้า|โอ้|แย่ล่ะ)(?:\s*(?:ค่ะ|คะ|ครับ|นะครับ))+([!.]*)/gi, '$1$2');
+            if (line.includes('!') || line.includes('?')) {
+                line = line.replace(/ค่ะ([!,.?\s]|$)/g, '$1');
+                line = line.replace(/คะ([!,.?\s]|$)/g, '$1');
+                line = line.replace(/นะคะ([!,.?\s]|$)/g, '$1');
+                line = line.replace(/นะค่ะ([!,.?\s]|$)/g, '$1');
+            }
+            line = line.replace(/[ \t]+/g, ' ').trim();
+            line = fixRightContext(line);
+            line = applyNameReplacement(line);
+            return line;
+        });
+        return cleanedLines.join('\n');
+    }
+
+    // ==========================================
+    // 🖱️ 7. DRAG & DROP + FILE LOAD
+    // ==========================================
+    window.addEventListener('dragover', (e) => { e.preventDefault(); e.stopPropagation(); });
+    window.addEventListener('drop', (e) => { e.preventDefault(); e.stopPropagation(); });
+    dropzone.addEventListener('dragenter', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        dragCounter++;
+        dropzone.style.borderColor = '#2563eb';
+        dropzone.style.background = '#f0f9ff';
+    });
+    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); e.stopPropagation(); });
+    dropzone.addEventListener('dragleave', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        dragCounter--;
+        if (dragCounter === 0) {
             dropzone.style.borderColor = '#38bdf8';
             dropzone.style.background = '#f8fafc';
+        }
+    });
+    dropzone.addEventListener('drop', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        dragCounter = 0;
+        dropzone.style.borderColor = '#38bdf8';
+        dropzone.style.background = '#f8fafc';
+        if (e.dataTransfer.files.length > 0) processSelectedFile(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) processSelectedFile(e.target.files[0]);
+    });
 
-            if (e.dataTransfer.files.length > 0) {
-                processSelectedFile(e.dataTransfer.files[0]);
-            }
+    function processSelectedFile(file) {
+        const ext = file.name.split('.').pop().toLowerCase();
+        if (!['srt', 'ass', 'ssa', 'vtt'].includes(ext)) {
+            alert('⚠️ รองรับเฉพาะ .srt, .ass, .ssa, .vtt เท่านั้น');
+            return;
+        }
+        selectedFile = file;
+        fileExtension = ext;
+        
+        // 🔥 ตรวจจับหนังจากชื่อไฟล์
+        const movieData = detectMovie(file.name);
+        activeNameMap = (movieData && movieData.nameMap) ? movieData.nameMap : {};
+        
+        // อัพเดท UI
+        if (movieData) {
+            detectionStatus.style.display = 'flex';
+            detectedMovieName.textContent = file.name.split('.').slice(0,3).join(' '); // แสดงชื่อคร่าวๆ
+            detectedGenre.textContent = movieData.genre || 'Unknown';
+            const count = Object.keys(activeNameMap).length;
+            detectedCharCount.textContent = count + ' ตัวละคร';
+            detectedMovieTitle = file.name;
+        } else {
+            detectionStatus.style.display = 'flex';
+            detectedMovieName.textContent = file.name;
+            detectedGenre.textContent = 'Generic (Fallback)';
+            detectedCharCount.textContent = '0 (ใช้ทับศัพท์อัตโนมัติ)';
+            // Fallback: แมปชื่อสามัญ
+            activeNameMap = {
+                'jean': 'จีน', 'peter': 'ปีเตอร์', 'bruce': 'บรูซ', 'tony': 'โทนี่',
+                'steve': 'สตีฟ', 'natasha': 'นาตาชา', 'frank': 'แฟรงค์', 'thor': 'ธอร์'
+            };
+            detectedMovieTitle = file.name;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            rawFileContent = e.target.result;
+            fileNameDisplay.innerHTML = `📄 ${selectedFile.name}`;
+            document.getElementById('progressContainer').style.display = 'block';
+            btnTranslate.removeAttribute('disabled');
+            btnTranslate.classList.add('active');
+            statusText.textContent = movieData ? `✅ ตรวจพบหนัง: ${movieData.genre} (ใช้ชื่อตามเสียง) ` : "⚠️ ตรวจจับไม่ได้ ใช้โหมดทับศัพท์พื้นฐาน";
+            progressBarFill.style.width = '0%';
+            percentageText.textContent = '0%';
+        };
+        reader.readAsText(selectedFile);
+    }
+
+    // ==========================================
+    // 🛡️ 8. TAG PROTECTION
+    // ==========================================
+    function protectTagsAndFix(textArray) {
+        return textArray.map(txt => {
+            let text = txt.trim();
+            if (!text) return { text: "", tags: [] };
+            terminologyDict.preTranslate.forEach(rule => text = text.replace(rule.regex, rule.replace));
+            let currentTags = [];
+            text = text.replace(/\\N/g, ' [[BR_ASS_N]] ');
+            text = text.replace(/\\n/g, ' [[BR_ASS_LOWER]] ');
+            text = text.replace(/<br\s*\/?>/gi, ' [[BR_HTML]] ');
+            text = text.replace(/\r?\n/g, ' [[BR_NEWLINE]] ');
+            let tagRegex = /(<\/?[a-zA-Z][^>]*>|\{[^}]+\})/g;
+            text = text.replace(tagRegex, function(match) {
+                currentTags.push(match);
+                return ` [[TAG_${currentTags.length - 1}]] `;
+            });
+            return { text, tags: currentTags };
         });
+    }
 
-        fileInput.addEventListener('change', (e) => { 
-            if (e.target.files.length > 0) {
-                processSelectedFile(e.target.files[0]); 
-            }
+    function restoreTagsAndClean(translatedArray, metaTagPairs) {
+        return translatedArray.map((txt, index) => {
+            let text = txt || "";
+            let tags = metaTagPairs[index].tags || [];
+            tags.forEach((tag, idx) => {
+                let pattern = new RegExp(`\\[\\[\\s*TAG_${idx}\\s*\\]\\]`, 'gi');
+                text = text.replace(pattern, tag);
+            });
+            text = text.replace(/\[\[\s*BR_HTML\s*\]\]/gi, '<br>');
+            text = text.replace(/\[\[\s*BR_ASS_N\s*\]\]/gi, '\\N');
+            text = text.replace(/\[\[\s*BR_ASS_LOWER\s*\]\]/gi, '\\n');
+            text = text.replace(/\[\[\s*BR_NEWLINE\s*\]\]/gi, '\n');
+            terminologyDict.postTranslate.forEach(rule => text = text.replace(rule.bad, rule.good));
+            text = autoCleanSubtitleText(text);
+            text = text.replace(/\s*(<\/?[a-zA-Z][^>]*>|\{[^}]+\})\s*/g, '$1');
+            text = text.replace(/ ?<br\s*\/?> ?/gi, '<br>');
+            text = text.replace(/ ?\\N ?/g, '\\N');
+            text = text.replace(/ ?\\n ?/g, '\\n');
+            return text.trim();
         });
+    }
 
-        function processSelectedFile(file) {
-            const ext = file.name.split('.').pop().toLowerCase();
-            const validExts = ['srt', 'ass', 'ssa', 'vtt'];
-            
-            if (!validExts.includes(ext)) {
-                alert('⚠️ ไม่รองรับไฟล์นี้! กรุณาใช้ไฟล์นามสกุล .srt, .ass, .ssa, หรือ .vtt เท่านั้นครับ');
-                return;
+    // ==========================================
+    // 🌐 9. TRANSLATION ENGINES
+    // ==========================================
+    const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+    async function translateWithGoogle(textArray, targetLang, apiKey, signal) {
+        let metaPairs = protectTagsAndFix(textArray);
+        let preparedTexts = metaPairs.map(p => p.text);
+        let rawTranslations = [];
+        if (apiKey) {
+            let params = new URLSearchParams();
+            params.append('key', apiKey);
+            params.append('target', targetLang);
+            params.append('format', 'text');
+            preparedTexts.forEach(t => params.append('q', t || ' '));
+            const res = await fetch(`https://translation.googleapis.com/language/translate/v2?${params.toString()}`, { method: 'POST', signal });
+            if (!res.ok) throw new Error("Google API Paid Error");
+            const data = await res.json();
+            rawTranslations = data.data.translations.map(t => t.translatedText);
+        } else {
+            const batchSize = 3;
+            for (let i = 0; i < preparedTexts.length; i += batchSize) {
+                if (signal && signal.aborted) throw new DOMException("Aborted", "AbortError");
+                const batch = preparedTexts.slice(i, i + batchSize);
+                const batchPromises = batch.map(async t => {
+                    if (!t) return "";
+                    let url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetLang}&dt=t&q=${encodeURIComponent(t)}`;
+                    try {
+                        const res = await fetch(url, { signal });
+                        if (!res.ok) return t;
+                        const data = await res.json();
+                        if (data && data[0]) return data[0].map(x => x[0]).join('');
+                        return t;
+                    } catch (e) {
+                        if (e.name === 'AbortError') throw e;
+                        return t;
+                    }
+                });
+                const batchResults = await Promise.all(batchPromises);
+                rawTranslations = rawTranslations.concat(batchResults);
+                await sleep(100);
             }
-            
-            selectedFile = file;
-            fileExtension = ext;
-            const reader = new FileReader();
-            
-            reader.onload = function(e) {
-                rawFileContent = e.target.result;
-                fileNameDisplay.innerHTML = `📄 ไฟล์ที่เลือก: ${selectedFile.name}`;
-                document.getElementById('progressContainer').style.display = 'block';
-                btnTranslate.removeAttribute('disabled');
-                btnTranslate.classList.add('active');
-                statusText.textContent = "ตรวจสอบโครงสร้างไฟล์และเตรียมระบบ Tag Protection เรียบร้อยครับ";
-                
+        }
+        return restoreTagsAndClean(rawTranslations, metaPairs);
+    }
+
+    async function translateWithOpenAI(textArray, targetLang, apiKey, signal) {
+        let metaPairs = protectTagsAndFix(textArray);
+        let preparedTexts = metaPairs.map(p => p.text);
+        let chunkText = preparedTexts.map((txt, idx) => `[L_${idx}] ${txt}`).join('\n');
+        
+        // ดึงข้อมูลหนังที่ตรวจจับได้เพื่อส่งให้ OpenAI
+        const movieInfo = detectMovie(selectedFile ? selectedFile.name : '');
+        const genreHint = movieInfo ? `Genre: ${movieInfo.genre}. ` : '';
+        const toneHint = movieInfo ? `Tone: ${movieInfo.tone}. ` : '';
+        const nameHint = movieInfo ? `Character names must be transliterated according to Thai cinema standards for this movie (e.g., Jean -> จีน, Peter -> ปีเตอร์).` : 'Transliterate names phonetically (American English style).';
+
+        const systemPrompt = `You are a veteran cinema subtitle translator.
+Movie detected: ${detectedMovieTitle}
+${genreHint}${toneHint}
+CRITICAL RULES:
+1. Translate line-by-line concisely for quick reading.
+2. Keep placeholders like "[[TAG_0]]", "[[BR_HTML]]" exactly intact.
+3. Use natural movie dialogue phrasing appropriate to the genre.
+4. Return ONLY rows matching [L_x].
+5. ${nameHint}
+6. For the word "Right" when used as agreement/acknowledgment, translate as "ใช่" or "ถูกต้อง" depending on context, NEVER "ขวา".`;
+
+        const res = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+            body: JSON.stringify({
+                model: 'gpt-4o',
+                messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: chunkText }],
+                temperature: 0.35
+            }),
+            signal
+        });
+        if (!res.ok) throw new Error("OpenAI Failed");
+        const data = await res.json();
+        if (data.choices && data.choices[0]) {
+            const reply = data.choices[0].message.content;
+            let resultList = new Array(textArray.length).fill("");
+            reply.split('\n').forEach(line => {
+                let match = line.match(/^\[L_(\d+)\]\s*(.*)/);
+                if (match) {
+                    let idx = parseInt(match[1]);
+                    if (idx < resultList.length) resultList[idx] = match[2].trim();
+                }
+            });
+            for (let k = 0; k < resultList.length; k++) {
+                if (!resultList[k] && textArray[k]) resultList[k] = "ไม่";
+            }
+            return restoreTagsAndClean(resultList, metaPairs);
+        }
+        throw new Error("OpenAI Parsing Error");
+    }
+
+    // ==========================================
+    // 🚀 10. MAIN PROCESSOR
+    // ==========================================
+    btnTranslate.addEventListener('click', async function() {
+        if (isTranslating) {
+            if (abortController) abortController.abort();
+            return;
+        }
+        if (!selectedFile) {
+            alert("⚠️ กรุณาเลือกไฟล์ก่อน");
+            return;
+        }
+        const engine = uiEngine.value;
+        const key = uiKey.value.trim();
+        const targetLang = uiLang.value;
+        if (engine === 'openai' && !key) {
+            alert("⚠️ ใส่ OpenAI API Key");
+            return;
+        }
+
+        isTranslating = true;
+        abortController = new AbortController();
+        btnTranslate.textContent = "❌ ยกเลิก";
+        btnTranslate.classList.remove('active');
+        btnTranslate.classList.add('cancel-mode');
+        statusText.textContent = "กำลังประมวลผล...";
+
+        try {
+            const lines = (fileExtension === 'srt' || fileExtension === 'vtt') ? rawFileContent.split(/\r?\n\r?\n/) : rawFileContent.split(/\r?\n/);
+            let finalBlocks = [];
+            let chunkSize = (engine === 'openai') ? 12 : 15;
+
+            for (let i = 0; i < lines.length; i += chunkSize) {
+                if (abortController.signal.aborted) throw new DOMException("Aborted", "AbortError");
+
+                let batch = lines.slice(i, i + chunkSize);
+                let textArray = [];
+                let meta = [];
+
+                batch.forEach(b => {
+                    let trimmed = b.trim();
+                    if (trimmed.startsWith('WEBVTT')) { meta.push({ type: 'raw', content: b }); } else if (!trimmed) { meta.push({ type: 'empty' }); } else if (fileExtension === 'srt' || fileExtension === 'vtt') {
+                        let l = trimmed.split(/\r?\n/);
+                        if (l.length >= 3) {
+                            meta.push({ type: 'sub', header: l[0], time: l[1] });
+                            textArray.push(l.slice(2).join('\n'));
+                        } else { meta.push({ type: 'raw', content: b }); }
+                    } else if (fileExtension === 'ass' || fileExtension === 'ssa') {
+                        if (trimmed.startsWith('Dialogue:')) {
+                            let parts = trimmed.split(',');
+                            meta.push({ type: 'ass_dialogue', prefix: parts.slice(0, 9).join(',') });
+                            textArray.push(parts.slice(9).join(','));
+                        } else { meta.push({ type: 'raw', content: b }); }
+                    } else { meta.push({ type: 'raw', content: b }); }
+                });
+
+                let translated = [];
+                try {
+                    if (engine === 'openai') translated = await translateWithOpenAI(textArray, targetLang, key, abortController.signal);
+                    else translated = await translateWithGoogle(textArray, targetLang, key, abortController.signal);
+                } catch (err) {
+                    if (err.name === 'AbortError') throw err;
+                    console.error("Fallback to Google", err);
+                    translated = await translateWithGoogle(textArray, targetLang, "", abortController.signal);
+                }
+
+                let tIdx = 0;
+                meta.forEach(m => {
+                    if (m.type === 'sub') finalBlocks.push(`${m.header}\n${m.time}\n${translated[tIdx++] || ""}`);
+                    else if (m.type === 'ass_dialogue') finalBlocks.push(`${m.prefix},${translated[tIdx++] || ""}`);
+                    else if (m.type === 'empty') finalBlocks.push("");
+                    else finalBlocks.push(m.content);
+                });
+
+                let pct = Math.min(Math.floor(((i + batch.length) / lines.length) * 100), 100);
+                progressBarFill.style.width = pct + '%';
+                percentageText.textContent = pct + '%';
+                statusText.textContent = `กำลังแปล ${i + batch.length} / ${lines.length}...`;
+                await sleep(10);
+            }
+
+            let finalContent = (fileExtension === 'srt' || fileExtension === 'vtt') ? finalBlocks.join('\n\n') : finalBlocks.join('\n');
+            const blob = new Blob([finalContent], { type: "text/plain;charset=utf-8" });
+            saveAs(blob, selectedFile.name.replace(/\.[^/.]+$/, "") + "." + targetLang + "." + fileExtension);
+            statusText.textContent = "🎉 แปลเสร็จแล้ว! (ตรวจจับหนังอัตโนมัติ)";
+            percentageText.textContent = "100%";
+
+        } catch (err) {
+            if (err.name === 'AbortError') {
+                statusText.textContent = "⚠️ ยกเลิกแล้ว";
                 progressBarFill.style.width = '0%';
                 percentageText.textContent = '0%';
-            };
-            
-            reader.readAsText(selectedFile);
-        }
-
-        // ==========================================
-        // 🛡️ 5. TAG & LINE-BREAK PROTECTION ENGINE (v.2.9.0)
-        // ==========================================
-        function protectTagsAndFix(textArray) {
-            return textArray.map(function(txt) {
-                let text = txt.trim();
-                
-                if (!text) {
-                    return { text: "", tags: [] };
-                }
-
-                // ดักแก้ไขคำศัพท์ก่อนแปล
-                terminologyDict.preTranslate.forEach(function(rule) {
-                    text = text.replace(rule.regex, rule.replace);
-                });
-
-                let currentTags = [];
-
-                // 1. มาร์กคำสั่งขึ้นบรรทัดใหม่ของ ASS (\N และ \n)
-                text = text.replace(/\\N/g, ' [[BR_ASS_N]] ');
-                text = text.replace(/\\n/g, ' [[BR_ASS_LOWER]] ');
-
-                // 2. มาร์ก Tag ขึ้นบรรทัดใหม่ของ HTML (<br>, <br/>)
-                text = text.replace(/<br\s*\/?>/gi, ' [[BR_HTML]] ');
-
-                // 3. มาร์กจุดขึ้นบรรทัดใหม่ปกติ (\n)
-                text = text.replace(/\r?\n/g, ' [[BR_NEWLINE]] ');
-
-                // 4. มาร์ก HTML Tags (<i>, </i>, <b>, <font...>) และ ASS Style Tags ({\...})
-                let tagRegex = /(<\/?[a-zA-Z][^>]*>|\{[^}]+\})/g;
-                
-                text = text.replace(tagRegex, function(match) {
-                    currentTags.push(match);
-                    return ` [[TAG_${currentTags.length - 1}]] `;
-                });
-
-                return { text: text, tags: currentTags };
-            });
-        }
-
-        function restoreTagsAndClean(translatedArray, metaTagPairs) {
-            return translatedArray.map(function(txt, index) {
-                let text = txt || "";
-                let tags = metaTagPairs[index].tags || [];
-
-                // 1. คืนค่า HTML Tags และ ASS Style Tags กลับที่เดิม
-                tags.forEach(function(tag, idx) {
-                    let pattern = new RegExp(`\\[\\[\\s*TAG_${idx}\\s*\\]\\]`, 'gi');
-                    text = text.replace(pattern, tag);
-                });
-
-                // 2. คืนค่าจุดขึ้นบรรทัดใหม่ประเภทต่างๆ
-                text = text.replace(/\[\[\s*BR_HTML\s*\]\]/gi, '<br>');
-                text = text.replace(/\[\[\s*BR_ASS_N\s*\]\]/gi, '\\N');
-                text = text.replace(/\[\[\s*BR_ASS_LOWER\s*\]\]/gi, '\\n');
-                text = text.replace(/\[\[\s*BR_NEWLINE\s*\]\]/gi, '\n');
-
-                // 3. คำศัพท์หลังแปล
-                terminologyDict.postTranslate.forEach(function(rule) {
-                    text = text.replace(rule.bad, rule.good);
-                });
-
-                // 4. ทำความสะอาดคำลงท้ายอัตโนมัติ (รักษารูปแบบบรรทัดเดิม)
-                text = autoCleanSubtitleText(text);
-
-                // 5. ล้างช่องว่างส่วนเกินรอบๆ Tags และจุดขึ้นบรรทัดใหม่
-                text = text.replace(/\s*(<\/?[a-zA-Z][^>]*>|\{[^}]+\})\s*/g, '$1');
-                text = text.replace(/ ?<br\s*\/?> ?/gi, '<br>');
-                text = text.replace(/ ?\\N ?/g, '\\N');
-                text = text.replace(/ ?\\n ?/g, '\\n');
-
-                return text.trim();
-            });
-        }
-
-        // ==========================================
-        // 🌐 6. TRANSLATION ENGINE: GOOGLE TRANSLATE
-        // ==========================================
-        const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-
-        async function translateWithGoogle(textArray, targetLang, apiKey, signal) {
-            let metaPairs = protectTagsAndFix(textArray);
-            let preparedTexts = metaPairs.map(p => p.text);
-            let rawTranslations = [];
-            
-            if (apiKey) {
-                let params = new URLSearchParams();
-                params.append('key', apiKey);
-                params.append('target', targetLang);
-                params.append('format', 'text');
-                
-                preparedTexts.forEach(function(t) {
-                    params.append('q', t || ' ');
-                });
-                
-                const res = await fetch(`https://translation.googleapis.com/language/translate/v2?${params.toString()}`, { 
-                    method: 'POST',
-                    signal: signal 
-                });
-                
-                if (!res.ok) {
-                    throw new Error("Google API Paid Error: Invalid Key or Quota Exceeded");
-                }
-                
-                const data = await res.json();
-                rawTranslations = data.data.translations.map(t => t.translatedText);
-                
             } else {
-                const batchSize = 3; 
-                
-                for (let i = 0; i < preparedTexts.length; i += batchSize) {
-                    if (signal && signal.aborted) throw new DOMException("Aborted", "AbortError");
-
-                    const batch = preparedTexts.slice(i, i + batchSize);
-                    
-                    const batchPromises = batch.map(async function(t) {
-                        if (!t) return "";
-                        let url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetLang}&dt=t&q=${encodeURIComponent(t)}`;
-                        try {
-                            const res = await fetch(url, { signal: signal });
-                            if (!res.ok) return t; 
-                            const data = await res.json();
-                            if (data && data[0]) {
-                                return data[0].map(x => x[0]).join('');
-                            }
-                            return t;
-                        } catch (e) {
-                            if (e.name === 'AbortError') throw e;
-                            return t;
-                        }
-                    });
-                    
-                    const batchResults = await Promise.all(batchPromises);
-                    rawTranslations = rawTranslations.concat(batchResults);
-                    
-                    await sleep(100); 
-                }
+                console.error(err);
+                statusText.textContent = "❌ เกิดข้อผิดพลาด";
             }
-            
-            return restoreTagsAndClean(rawTranslations, metaPairs);
+        } finally {
+            isTranslating = false;
+            abortController = null;
+            btnTranslate.textContent = "เริ่มกระบวนการแปลซับไตเติล";
+            btnTranslate.classList.remove('cancel-mode');
+            btnTranslate.removeAttribute('disabled');
+            btnTranslate.classList.add('active');
         }
-
-        // ==========================================
-        // 🧠 7. TRANSLATION ENGINE: OPENAI GPT-4o
-        // ==========================================
-        async function translateWithOpenAI(textArray, targetLang, apiKey, signal) {
-            let metaPairs = protectTagsAndFix(textArray);
-            let preparedTexts = metaPairs.map(p => p.text);
-            
-            let chunkText = preparedTexts.map(function(txt, index) {
-                return `[L_${index}] ${txt}`;
-            }).join('\n');
-
-            const systemPrompt = `You are a veteran master cinema subtitle translator converting movie dialogues into Thai naturally based on context.
-CRITICAL THEATRICAL CINEMA SUBTITLE GUIDELINES:
-1. Translate line-by-line concisely for quick reading.
-2. Keep all placeholder tags like "[[TAG_0]]", "[[BR_HTML]]", "[[BR_NEWLINE]]", "[[BR_ASS_N]]" EXACTLY intact in their relative positions.
-3. Use natural movie dialogue phrasing without forcing unnecessary polite particles on short exclamations or emotional lines.
-4. Return ONLY the rows matching the [L_x] structure.`;
-
-            const res = await fetch('https://api.openai.com/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`
-                },
-                body: JSON.stringify({
-                    model: 'gpt-4o',
-                    messages: [
-                        { role: 'system', content: systemPrompt },
-                        { role: 'user', content: chunkText }
-                    ],
-                    temperature: 0.35
-                }),
-                signal: signal
-            });
-
-            if (!res.ok) {
-                throw new Error("OpenAI Engine Failed or API Key is Invalid");
-            }
-
-            const data = await res.json();
-            
-            if (data.choices && data.choices[0]) {
-                const reply = data.choices[0].message.content;
-                let resultList = new Array(textArray.length).fill("");
-                
-                const lines = reply.split('\n');
-                lines.forEach(function(line) {
-                    let match = line.match(/^\[L_(\d+)\]\s*(.*)/);
-                    if (match) {
-                        let idx = parseInt(match[1]);
-                        if (idx < resultList.length) {
-                            resultList[idx] = match[2].trim();
-                        }
-                    }
-                });
-
-                for (let k = 0; k < resultList.length; k++) {
-                    if (!resultList[k] && textArray[k]) {
-                        resultList[k] = "ไม่"; 
-                    }
-                }
-                return restoreTagsAndClean(resultList, metaPairs);
-            }
-            
-            throw new Error("OpenAI Parsing Error: Choice empty");
-        }
-
-        // ==========================================
-        // 🚀 8. MAIN PROCESSOR & EXECUTION FLOW
-        // ==========================================
-        btnTranslate.addEventListener('click', async function() {
-            if (isTranslating) {
-                if (abortController) {
-                    abortController.abort();
-                }
-                return;
-            }
-
-            if (!selectedFile) {
-                alert("⚠️ กรุณาเลือกไฟล์ซับไตเติลก่อนเริ่มกระบวนการแปลครับ");
-                return;
-            }
-
-            const engine = uiEngine.value;
-            const key = uiKey.value.trim();
-            const targetLang = uiLang.value;
-            
-            if (engine === 'openai' && !key) {
-                alert("⚠️ กรุณาใส่ API Key ของ OpenAI ก่อนเริ่มกระบวนการแปลครับ");
-                return;
-            }
-
-            isTranslating = true;
-            abortController = new AbortController();
-            
-            btnTranslate.textContent = "❌ ยกเลิกการแปล (Cancel)";
-            btnTranslate.classList.remove('active');
-            btnTranslate.classList.add('cancel-mode');
-            statusText.textContent = "กำลังประมวลผล...";
-
-            try {
-                const lines = (fileExtension === 'srt' || fileExtension === 'vtt') 
-                    ? rawFileContent.split(/\r?\n\r?\n/) 
-                    : rawFileContent.split(/\r?\n/);
-                    
-                let finalBlocks = [];
-                let chunkSize = (engine === 'openai') ? 12 : 15; 
-                
-                for (let i = 0; i < lines.length; i += chunkSize) {
-                    if (abortController.signal.aborted) {
-                        throw new DOMException("Aborted", "AbortError");
-                    }
-
-                    let batch = lines.slice(i, i + chunkSize);
-                    let textArray = [];
-                    let meta = [];
-                    
-                    batch.forEach(function(b) {
-                        let trimmed = b.trim();
-                        
-                        if (trimmed.startsWith('WEBVTT')) {
-                            meta.push({ type: 'raw', content: b });
-                        }
-                        else if (!trimmed) {
-                            meta.push({ type: 'empty' });
-                        } 
-                        else if (fileExtension === 'srt' || fileExtension === 'vtt') {
-                            let l = trimmed.split(/\r?\n/);
-                            if (l.length >= 3) {
-                                meta.push({ type: 'sub', header: l[0], time: l[1] });
-                                // รักษาจุดขึ้นบรรทัดใหม่เดิมไว้ ด้วยการใช้ \n เชื่อม (ไม่ใช้ space)
-                                textArray.push(l.slice(2).join('\n'));
-                            } else {
-                                meta.push({ type: 'raw', content: b });
-                            }
-                        } 
-                        else if (fileExtension === 'ass' || fileExtension === 'ssa') {
-                            if (trimmed.startsWith('Dialogue:')) {
-                                let parts = trimmed.split(',');
-                                meta.push({ type: 'ass_dialogue', prefix: parts.slice(0, 9).join(',') });
-                                textArray.push(parts.slice(9).join(','));
-                            } else {
-                                meta.push({ type: 'raw', content: b });
-                            }
-                        } 
-                        else {
-                            meta.push({ type: 'raw', content: b });
-                        }
-                    });
-                    
-                    let translated = [];
-                    try {
-                        if (engine === 'openai') {
-                            translated = await translateWithOpenAI(textArray, targetLang, key, abortController.signal);
-                        } else {
-                            translated = await translateWithGoogle(textArray, targetLang, key, abortController.signal);
-                        }
-                    } catch (err) {
-                        if (err.name === 'AbortError') throw err;
-                        console.error("Critical Intercept - API Error, Fallback Triggered", err);
-                        translated = await translateWithGoogle(textArray, targetLang, "", abortController.signal); 
-                    }
-
-                    let tIdx = 0;
-                    meta.forEach(function(m) {
-                        if (m.type === 'sub') {
-                            finalBlocks.push(`${m.header}\n${m.time}\n${translated[tIdx++] || ""}`);
-                        } 
-                        else if (m.type === 'ass_dialogue') {
-                            finalBlocks.push(`${m.prefix},${translated[tIdx++] || ""}`);
-                        } 
-                        else if (m.type === 'empty') {
-                            finalBlocks.push("");
-                        } 
-                        else {
-                            finalBlocks.push(m.content);
-                        }
-                    });
-                    
-                    let pct = Math.min(Math.floor(((i + batch.length) / lines.length) * 100), 100);
-                    progressBarFill.style.width = pct + '%';
-                    percentageText.textContent = pct + '%';
-                    statusText.textContent = `กำลังแปลบรรทัดที่ ${i + batch.length} / ${lines.length}...`;
-                    
-                    await sleep(10); 
-                }
-                
-                let finalContent = (fileExtension === 'srt' || fileExtension === 'vtt') 
-                    ? finalBlocks.join('\n\n') 
-                    : finalBlocks.join('\n');
-                    
-                const blob = new Blob([finalContent], { type: "text/plain;charset=utf-8" });
-                saveAs(blob, selectedFile.name.replace(/\.[^/.]+$/, "") + "." + targetLang + "." + fileExtension);
-                
-                statusText.textContent = "🎉 แปลเสร็จสิ้นและบันทึกไฟล์เรียบร้อยแล้วครับ!";
-                percentageText.textContent = "100%";
-
-            } catch (err) {
-                if (err.name === 'AbortError') {
-                    statusText.textContent = "⚠️ ยกเลิกการแปลเรียบร้อยแล้ว (คุณสามารถเลือกไฟล์ใหม่ได้ทันที)";
-                    progressBarFill.style.width = '0%';
-                    percentageText.textContent = '0%';
-                } else {
-                    console.error(err);
-                    statusText.textContent = "❌ เกิดข้อผิดพลาดระหว่างกระบวนการแปล";
-                }
-            } finally {
-                isTranslating = false;
-                abortController = null;
-                btnTranslate.textContent = "เริ่มกระบวนการแปลซับไตเติล";
-                btnTranslate.classList.remove('cancel-mode');
-                btnTranslate.removeAttribute('disabled');
-                btnTranslate.classList.add('active');
-            }
-        });
-    </script>
+    });
+</script>
 </body>
 </html>
