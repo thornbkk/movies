@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SubThorn v.2.9.7 (Smart Placeholder for Google Translate)</title>
+    <title>SubThorn v.2.9.8 (Fixed Upload & Drag-Drop)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/1.3.8/FileSaver.min.js"></script>
     <style>
         body {
@@ -56,10 +56,15 @@
             cursor: pointer;
             transition: all 0.25s ease;
             margin-bottom: 20px;
+            user-select: none;
         }
         .dropzone:hover {
             border-color: #2563eb;
             background: #f0f9ff;
+        }
+        .dropzone.dragover {
+            border-color: #2563eb;
+            background: #dbeafe;
         }
         .form-label {
             font-size: 13px;
@@ -206,27 +211,35 @@
             border-radius: 20px;
             margin-left: 6px;
         }
+        .file-status {
+            font-size: 13px;
+            color: #475569;
+            margin-top: 6px;
+        }
     </style>
 </head>
 <body>
 
     <div class="main-container">
         <h1 class="main-title">SubThorn Translation</h1>
-        <div class="main-version">SMART PLACEHOLDER EDITION <span class="update-badge">v.2.9.7</span></div>
+        <div class="main-version">FIXED UPLOAD & DRAG-DROP <span class="update-badge">v.2.9.8</span></div>
 
         <div class="converter-card">
-            <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click(); return false;">
+            <!-- Dropzone Area -->
+            <div class="dropzone" id="dropzone">
                 <div style="font-size: 44px; margin-bottom: 12px;">🎬</div>
-                <p style="font-weight: 700; color: #334155; margin: 5px 0; font-size: 15px;">แตะเลือกไฟล์ หรือลากไฟล์มาวางที่นี่</p>
+                <p style="font-weight: 700; color: #334155; margin: 5px 0; font-size: 15px;">👆 คลิกเพื่อเลือกไฟล์ หรือลากไฟล์มาวางที่นี่</p>
                 <p style="font-size: 13px; color: #64748b; margin: 5px 0 0 0;">รองรับ .srt, .ass, .ssa, .vtt</p>
+                <div class="file-status" id="fileStatus">ยังไม่ได้เลือกไฟล์</div>
                 <input type="file" id="fileInput" accept=".srt,.ass,.ssa,.vtt" style="display:none;">
             </div>
 
+            <!-- สถานะการตรวจจับหนัง -->
             <div class="detection-status" id="detectionStatus">
                 <span>🎯 ตรวจจับ:</span>
                 <span id="detectedMovieName" style="font-weight:bold;">-</span>
                 <span class="badge" id="detectedGenre">-</span>
-                <span class="info-text" id="detectedInfo">🔹 ใช้ Placeholder + ทับศัพท์อัตโนมัติ</span>
+                <span class="info-text" id="detectedInfo">🔹 Placeholder + ทับศัพท์อัตโนมัติ</span>
             </div>
 
             <label class="form-label">🤖 เครื่องมือแปลภาษา</label>
@@ -256,7 +269,7 @@
             </div>
 
             <button class="btn-translate" id="btnTranslate" disabled>เริ่มกระบวนการแปลซับไตเติล</button>
-            <div class="engine-note">🛠️ <b>v.2.9.7:</b> <span style="color:#22c55e;">🧠 ใช้ Placeholder + Phonetic Transliteration</span> แก้ชื่อผิดใน Google โดยไม่ต้องเพิ่มชื่อในโค้ด <span class="method-badge">เหมาะกับ Google</span></div>
+            <div class="engine-note">🛠️ <b>v.2.9.8:</b> <span style="color:#22c55e;">✅ แก้ไขปัญหาคลิก/ลากไฟล์</span> + Placeholder + ทับศัพท์อัตโนมัติ <span class="method-badge">เหมาะกับ Google</span></div>
         </div>
     </div>
 
@@ -271,6 +284,7 @@
         const percentageText = document.getElementById('percentageText');
         const fileNameDisplay = document.getElementById('fileNameDisplay');
         const dropzone = document.getElementById('dropzone');
+        const fileStatus = document.getElementById('fileStatus');
         const detectionStatus = document.getElementById('detectionStatus');
         const detectedMovieName = document.getElementById('detectedMovieName');
         const detectedGenre = document.getElementById('detectedGenre');
@@ -289,7 +303,7 @@
         let detectedGenreText = "General";
 
         // ==========================================
-        // 📚 2. MINIMAL MOVIE DB (เฉพาะแนว)
+        // 📚 2. MINIMAL MOVIE DB
         // ==========================================
         const MOVIE_DB = {
             'spider-man': { genre: 'Superhero / Action' },
@@ -338,15 +352,12 @@
         }
 
         // ==========================================
-        // 🧠 4. PHONETIC NAME TRANSLITERATOR (NO DICTIONARY NEEDED)
+        // 🧠 4. PHONETIC NAME TRANSLITERATOR
         // ==========================================
-        // ฟังก์ชันนี้จะแปลงชื่อภาษาอังกฤษเป็นไทยตามหลักการอ่าน
-        // ไม่ต้องเก็บชื่อทุกตัวในโค้ด!
         function phoneticTransliterate(name) {
             if (!name) return name;
             let result = name;
 
-            // 1. จัดการคำพิเศษที่พบบ่อย (เฉพาะชื่อที่แปลไม่ตรงตามสัทศาสตร์)
             const exceptions = {
                 'jean': 'จีน',
                 'john': 'จอห์น',
@@ -392,7 +403,6 @@
                 'saruman': 'ซารูมาน',
                 'gollum': 'กอลลัม',
                 'jake': 'เจค',
-                'ney\'tiri': 'เนย์ติริ',
                 'quaritch': 'ควอริทช์',
                 'grace': 'เกรซ',
                 'pandora': 'แพนดอร่า',
@@ -413,9 +423,7 @@
                 return exceptions[lowerName];
             }
 
-            // 2. กฎการทับศัพท์อัตโนมัติ (Phoneme -> Thai)
             const rules = [
-                // พยัญชนะต้น
                 { from: /^sh/ig, to: 'ช' },
                 { from: /^ch/ig, to: 'ช' },
                 { from: /^ph/ig, to: 'ฟ' },
@@ -426,8 +434,6 @@
                 { from: /^wr/ig, to: 'ร' },
                 { from: /^ps/ig, to: 'ส' },
                 { from: /^pn/ig, to: 'น' },
-
-                // สระและเสียงกลาง
                 { from: /ee/ig, to: 'ี' },
                 { from: /ea/ig, to: 'ี' },
                 { from: /oo/ig, to: 'ู' },
@@ -439,8 +445,6 @@
                 { from: /ie/ig, to: 'ี' },
                 { from: /oa/ig, to: 'โอ' },
                 { from: /ue/ig, to: 'ยู' },
-
-                // ตัวสะกด
                 { from: /ng$/ig, to: 'ง' },
                 { from: /n$/ig, to: 'น' },
                 { from: /m$/ig, to: 'ม' },
@@ -456,17 +460,11 @@
                 { from: /l$/ig, to: 'ล' },
                 { from: /x$/ig, to: 'กซ์' },
                 { from: /ck$/ig, to: 'ค' },
-
-                // -er / -or
                 { from: /er$/ig, to: 'เออร์' },
                 { from: /or$/ig, to: 'อร์' },
                 { from: /ar$/ig, to: 'าร์' },
-
-                // -son
                 { from: /son$/ig, to: 'สัน' },
                 { from: /sen$/ig, to: 'เซ่น' },
-
-                // ตัวอักษรเดี่ยว
                 { from: /a/ig, to: 'อะ' },
                 { from: /e/ig, to: 'เอ' },
                 { from: /i/ig, to: 'อิ' },
@@ -482,24 +480,13 @@
                 { from: /x/ig, to: 'กซ' }
             ];
 
-            // เรียงจากยาวไปสั้นเพื่อป้องกันการแทนที่ซ้อน
             rules.sort((a, b) => b.from.source.length - a.from.source.length);
 
             let processed = result;
             rules.forEach(rule => {
-                // ใช้ while loop เพื่อจัดการหลายตัวในคำเดียวกัน
-                let match;
-                let temp = processed;
-                let count = 0;
-                while ((match = rule.from.exec(temp)) !== null && count < 10) {
-                    // เราจะแทนที่ทีละตัวโดยใช้ string replace
-                    count++;
-                }
-                // ใช้ replace แบบปกติ (จะทำทุกตัว)
                 processed = processed.replace(rule.from, rule.to);
             });
 
-            // 3. ปรับแต่งให้อ่านง่าย
             processed = processed.replace(/ะา/g, 'า');
             processed = processed.replace(/ะิ/g, 'ิ');
             processed = processed.replace(/ะุ/g, 'ุ');
@@ -508,11 +495,8 @@
             processed = processed.replace(/ะอ/g, 'อ');
             processed = processed.replace(/([ก-ฮ])ะ([ก-ฮ])/g, '$1$2');
             processed = processed.replace(/ะ([ก-ฮ])/g, '$1');
-
-            // ตัดเสียงพยัญชนะท้ายที่ไม่จำเป็น
             processed = processed.replace(/์์/g, '์');
 
-            // ถ้ายังเป็นภาษาอังกฤษอยู่ (ไม่มีตัวอักษรไทย) ให้คืนค่าต้นฉบับ
             if (!/[ก-ฮ]/.test(processed)) {
                 return name;
             }
@@ -523,7 +507,6 @@
         // ==========================================
         // 🧠 5. NAME DETECTION & PLACEHOLDER SYSTEM
         // ==========================================
-        // ตรวจจับชื่อในข้อความ (คำที่ขึ้นต้นด้วยตัวพิมพ์ใหญ่และไม่ใช่คำทั่วไป)
         function detectNamesInText(text) {
             const words = text.split(/\s+/);
             const commonWords = ['I', 'You', 'He', 'She', 'It', 'We', 'They', 'My', 'Your', 'His', 'Her', 'Our',
@@ -535,7 +518,6 @@
             ];
             const names = [];
             words.forEach(word => {
-                // ลบเครื่องหมายวรรคตอน
                 let clean = word.replace(/^[^a-zA-Z]+/, '').replace(/[^a-zA-Z]+$/, '');
                 if (clean.length > 1 && clean[0] === clean[0].toUpperCase() && clean[0] !== clean[0]
                     .toLowerCase()) {
@@ -553,12 +535,9 @@
             let result = text;
             const used = {};
             names.forEach(name => {
-                // กันไม่ให้แทนที่ชื่อซ้ำหลายครั้ง
                 if (used[name]) return;
                 used[name] = true;
-                // ใช้ regex แบบ case-sensitive เพื่อให้ตรงกับตัวพิมพ์ใหญ่
                 const regex = new RegExp('\\b' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'g');
-                // เก็บชื่อไว้ในแผนที่เพื่อคืนค่าทีหลัง
                 if (!window._namePlaceholderMap) window._namePlaceholderMap = {};
                 const placeholder = `[[NAME_${name}]]`;
                 window._namePlaceholderMap[placeholder] = name;
@@ -572,16 +551,12 @@
             let result = text;
             if (window._namePlaceholderMap) {
                 for (const [placeholder, originalName] of Object.entries(window._namePlaceholderMap)) {
-                    // แทนที่ด้วยชื่อที่ทับศัพท์แล้ว
                     const thaiName = phoneticTransliterate(originalName);
                     result = result.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
                     thaiName);
                 }
             }
-            // ทำความสะอาดชื่อที่อาจหลุดรอดไป (กรณี Google แปลชื่อทิ้งไว้เป็นภาษาอังกฤษ)
-            // ตรวจจับคำที่ขึ้นต้นด้วยตัวพิมพ์ใหญ่และทับศัพท์
             const words = result.split(/\s+/);
-            let newResult = [];
             const commonWords = ['I', 'You', 'He', 'She', 'It', 'We', 'They', 'My', 'Your', 'His', 'Her', 'Our',
                 'Their', 'Me', 'Him', 'Us', 'Them', 'This', 'That', 'What', 'Who', 'Whom', 'Which', 'Where',
                 'When', 'Why', 'How', 'A', 'An', 'The', 'To', 'For', 'Of', 'With', 'From', 'By', 'On', 'At',
@@ -589,9 +564,9 @@
                 'During', 'Within', 'Upon', 'Toward', 'Than', 'As', 'So', 'But', 'Or', 'And', 'Nor', 'Yet',
                 'For', 'So', 'For', 'Nor', 'But', 'Or', 'Yet', 'So'
             ];
+            let newResult = [];
             words.forEach(word => {
                 let clean = word.replace(/^[^a-zA-Z]+/, '').replace(/[^a-zA-Z]+$/, '');
-                // ถ้าเป็นคำที่ขึ้นต้นด้วยตัวพิมพ์ใหญ่ และยาว > 1 และไม่ใช่คำทั่วไป และยังไม่มีตัวอักษรไทย
                 if (clean.length > 1 && clean[0] === clean[0].toUpperCase() && !/[ก-ฮ]/.test(word) && !
                     commonWords.includes(clean) && !commonWords.includes(clean.toUpperCase())) {
                     const thai = phoneticTransliterate(clean);
@@ -602,14 +577,12 @@
                 newResult.push(word);
             });
             result = newResult.join(' ');
-
-            // ล้าง Placeholder ที่เหลือ
             result = result.replace(/\[\[NAME_[^\]]+\]\]/g, '');
             return result;
         }
 
         // ==========================================
-        // 🧠 6. CONTEXT-AWARE "RIGHT" FIXER
+        // 🧠 6. RIGHT FIXER
         // ==========================================
         function fixRightContext(line) {
             if (!line) return line;
@@ -662,11 +635,7 @@
                     line = line.replace(/นะค่ะ([!,.?\s]|$)/g, '$1');
                 }
                 line = line.replace(/[ \t]+/g, ' ').trim();
-
-                // 🔥 แก้ "ขวา"
                 line = fixRightContext(line);
-
-                // 🔥 สำหรับ Google: คืนค่า Placeholder และทับศัพท์ชื่อที่เหลือ
                 if (engine === 'google_free') {
                     line = restorePlaceholders(line);
                 }
@@ -679,20 +648,14 @@
         // 🛡️ 8. TAG PROTECTION
         // ==========================================
         function protectTagsAndFix(textArray, engine) {
-            // Clear global map before processing
             window._namePlaceholderMap = {};
-
             return textArray.map(txt => {
                 let text = txt.trim();
                 if (!text) return { text: "", tags: [] };
-
                 terminologyDict.preTranslate.forEach(rule => text = text.replace(rule.regex, rule.replace));
-
-                // 🔥 สำหรับ Google: ใส่ Placeholder แทนชื่อ
                 if (engine === 'google_free') {
                     text = applyPlaceholders(text);
                 }
-
                 let currentTags = [];
                 text = text.replace(/\\N/g, ' [[BR_ASS_N]] ');
                 text = text.replace(/\\n/g, ' [[BR_ASS_LOWER]] ');
@@ -735,7 +698,6 @@
         const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
         async function translateWithGoogle(textArray, targetLang, apiKey, signal) {
-            // ส่ง engine='google_free' เพื่อให้รู้ว่าใช้ Placeholder
             let metaPairs = protectTagsAndFix(textArray, 'google_free');
             let preparedTexts = metaPairs.map(p => p.text);
             let rawTranslations = [];
@@ -780,7 +742,6 @@
         }
 
         async function translateWithOpenAI(textArray, targetLang, apiKey, signal) {
-            // OpenAI ไม่ต้องใช้ Placeholder เพราะ AI จัดการชื่อเอง
             let metaPairs = protectTagsAndFix(textArray, 'openai');
             let preparedTexts = metaPairs.map(p => p.text);
             let chunkText = preparedTexts.map((txt, idx) => `[L_${idx}] ${txt}`).join('\n');
@@ -830,20 +791,23 @@
         }
 
         // ==========================================
-        // 📥 10. FILE PROCESSING (FIXED D&D)
+        // 📥 10. FILE PROCESSING (FIXED 100%)
         // ==========================================
-        document.addEventListener('dragover', (e) => e.preventDefault());
-        document.addEventListener('drop', (e) => e.preventDefault());
-
+        // ฟังก์ชันหลักสำหรับประมวลผลไฟล์
         function processSelectedFile(file) {
             const ext = file.name.split('.').pop().toLowerCase();
             if (!['srt', 'ass', 'ssa', 'vtt'].includes(ext)) {
                 alert('⚠️ รองรับเฉพาะ .srt, .ass, .ssa, .vtt เท่านั้น');
                 return;
             }
+
             selectedFile = file;
             fileExtension = ext;
+            fileStatus.textContent = '📄 ' + file.name;
+            fileStatus.style.color = '#059669';
+            fileStatus.style.fontWeight = 'bold';
 
+            // ตรวจจับหนัง
             const movieData = detectMovie(file.name);
             detectedMovieTitle = movieData.key || 'Unknown';
             detectedGenreText = movieData.genre || 'General';
@@ -867,52 +831,92 @@
             reader.onerror = function(e) {
                 alert('❌ ไม่สามารถอ่านไฟล์ได้ กรุณาลองใหม่');
                 console.error(e);
+                fileStatus.textContent = '❌ อ่านไฟล์ไม่สำเร็จ';
+                fileStatus.style.color = '#dc2626';
             };
             reader.readAsText(selectedFile);
         }
 
-        // Dropzone Events
-        dropzone.addEventListener('dragover', (e) => {
+        // --- การจัดการ Dropzone แบบใหม่ (แก้ปัญหา 100%) ---
+
+        // 1. คลิกที่ dropzone → เปิด file input
+        dropzone.addEventListener('click', function(e) {
+            // ป้องกันไม่ให้เกิดการเปิดไฟล์ซ้ำซ้อน
             e.preventDefault();
             e.stopPropagation();
-            dropzone.style.borderColor = '#2563eb';
-            dropzone.style.background = '#f0f9ff';
+            fileInput.click();
         });
 
-        dropzone.addEventListener('dragleave', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            dropzone.style.borderColor = '#38bdf8';
-            dropzone.style.background = '#f8fafc';
+        // 2. รับไฟล์จาก file input
+        fileInput.addEventListener('change', function(e) {
+            if (e.target.files.length > 0) {
+                processSelectedFile(e.target.files[0]);
+            }
+            // รีเซ็ตค่าเพื่อให้เลือกไฟล์เดิมซ้ำได้
+            fileInput.value = '';
         });
 
-        dropzone.addEventListener('drop', (e) => {
+        // 3. Drag Over - แสดงสถานะ
+        dropzone.addEventListener('dragover', function(e) {
             e.preventDefault();
             e.stopPropagation();
-            dropzone.style.borderColor = '#38bdf8';
-            dropzone.style.background = '#f8fafc';
+            dropzone.classList.add('dragover');
+        });
+
+        // 4. Drag Leave - ลบสถานะ
+        dropzone.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            dropzone.classList.remove('dragover');
+        });
+
+        // 5. Drop - รับไฟล์
+        dropzone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            dropzone.classList.remove('dragover');
+
             const files = e.dataTransfer.files;
             if (files.length > 0) {
                 processSelectedFile(files[0]);
             }
         });
 
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) {
-                processSelectedFile(e.target.files[0]);
+        // 6. ป้องกันการเปิดไฟล์ในหน้าต่างเบราว์เซอร์ (เฉพาะบน dropzone เท่านั้น)
+        // ไม่ใช้ document.addEventListener เพื่อไม่ให้ปิดกั้นการทำงานอื่น
+        dropzone.addEventListener('dragenter', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        });
+
+        // 7. ป้องกันการเปิดไฟล์ทั้งหน้าเฉพาะกรณีที่ลากผ่าน dropzone
+        // แต่ไม่ปิดกั้นทั่วโลก เพื่อไม่ให้เกิดปัญหา
+        document.addEventListener('dragover', function(e) {
+            // ถ้าเป้าหมายคือ dropzone หรืออยู่ภายใน dropzone ให้ปล่อยให้จัดการเอง
+            if (dropzone.contains(e.target)) {
+                return;
             }
+            e.preventDefault();
+        });
+
+        document.addEventListener('drop', function(e) {
+            // ถ้าเป้าหมายคือ dropzone หรืออยู่ภายใน dropzone ให้ปล่อยให้จัดการเอง
+            if (dropzone.contains(e.target)) {
+                return;
+            }
+            e.preventDefault();
         });
 
         // ==========================================
         // 💾 11. SAVE SETTINGS
         // ==========================================
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', function() {
             if (localStorage.getItem('sub_engine')) uiEngine.value = localStorage.getItem('sub_engine');
             if (localStorage.getItem('sub_apikey')) uiKey.value = localStorage.getItem('sub_apikey');
             if (localStorage.getItem('sub_lang')) uiLang.value = localStorage.getItem('sub_lang');
         });
 
-        const saveSettings = () => {
+        var saveSettings = function() {
             localStorage.setItem('sub_engine', uiEngine.value);
             localStorage.setItem('sub_apikey', uiKey.value.trim());
             localStorage.setItem('sub_lang', uiLang.value);
@@ -934,9 +938,9 @@
                 alert("⚠️ กรุณาเลือกไฟล์ก่อน");
                 return;
             }
-            const engine = uiEngine.value;
-            const key = uiKey.value.trim();
-            const targetLang = uiLang.value;
+            var engine = uiEngine.value;
+            var key = uiKey.value.trim();
+            var targetLang = uiLang.value;
 
             if (engine === 'openai' && !key) {
                 alert("⚠️ กรุณาใส่ OpenAI API Key");
@@ -948,49 +952,57 @@
             btnTranslate.textContent = "❌ ยกเลิก";
             btnTranslate.classList.remove('active');
             btnTranslate.classList.add('cancel-mode');
-            statusText.textContent = `กำลังแปลด้วย ${engine === 'openai' ? 'OpenAI (ชื่ออัตโนมัติ)' : 'Google (Placeholder)'}...`;
+            statusText.textContent = 'กำลังแปลด้วย ' + (engine === 'openai' ? 'OpenAI (ชื่ออัตโนมัติ)' :
+            'Google (Placeholder)') + '...';
 
             try {
-                const lines = (fileExtension === 'srt' || fileExtension === 'vtt') ? rawFileContent.split(
+                var lines = (fileExtension === 'srt' || fileExtension === 'vtt') ? rawFileContent.split(
                     /\r?\n\r?\n/) : rawFileContent.split(/\r?\n/);
-                let finalBlocks = [];
-                let chunkSize = (engine === 'openai') ? 12 : 15;
+                var finalBlocks = [];
+                var chunkSize = (engine === 'openai') ? 12 : 15;
 
-                // ล้าง Placeholder Map ก่อนเริ่ม
                 window._namePlaceholderMap = {};
 
-                for (let i = 0; i < lines.length; i += chunkSize) {
+                for (var i = 0; i < lines.length; i += chunkSize) {
                     if (abortController.signal.aborted) throw new DOMException("Aborted", "AbortError");
 
-                    let batch = lines.slice(i, i + chunkSize);
-                    let textArray = [];
-                    let meta = [];
+                    var batch = lines.slice(i, i + chunkSize);
+                    var textArray = [];
+                    var meta = [];
 
-                    batch.forEach(b => {
-                        let trimmed = b.trim();
-                        if (trimmed.startsWith('WEBVTT')) { meta.push({ type: 'raw',
-                            content: b }); } else if (!trimmed) { meta.push({ type: 'empty' });
+                    batch.forEach(function(b) {
+                        var trimmed = b.trim();
+                        if (trimmed.startsWith('WEBVTT')) {
+                            meta.push({ type: 'raw', content: b });
+                        } else if (!trimmed) {
+                            meta.push({ type: 'empty' });
                         } else if (fileExtension === 'srt' || fileExtension === 'vtt') {
-                            let l = trimmed.split(/\r?\n/);
+                            var l = trimmed.split(/\r?\n/);
                             if (l.length >= 3) {
                                 meta.push({ type: 'sub', header: l[0], time: l[1] });
                                 textArray.push(l.slice(2).join('\n'));
-                            } else { meta.push({ type: 'raw', content: b }); }
+                            } else {
+                                meta.push({ type: 'raw', content: b });
+                            }
                         } else if (fileExtension === 'ass' || fileExtension === 'ssa') {
                             if (trimmed.startsWith('Dialogue:')) {
-                                let parts = trimmed.split(',');
+                                var parts = trimmed.split(',');
                                 meta.push({ type: 'ass_dialogue', prefix: parts.slice(0, 9)
                                         .join(',') });
                                 textArray.push(parts.slice(9).join(','));
-                            } else { meta.push({ type: 'raw', content: b }); }
-                        } else { meta.push({ type: 'raw', content: b }); }
+                            } else {
+                                meta.push({ type: 'raw', content: b });
+                            }
+                        } else {
+                            meta.push({ type: 'raw', content: b });
+                        }
                     });
 
-                    let translated = [];
+                    var translated = [];
                     try {
                         if (engine === 'openai') {
                             translated = await translateWithOpenAI(textArray, targetLang, key,
-                            abortController.signal);
+                                abortController.signal);
                         } else {
                             translated = await translateWithGoogle(textArray, targetLang, key,
                                 abortController.signal);
@@ -1002,34 +1014,37 @@
                             abortController.signal);
                     }
 
-                    let tIdx = 0;
-                    meta.forEach(m => {
-                        if (m.type === 'sub') finalBlocks.push(
-                            `${m.header}\n${m.time}\n${translated[tIdx++] || ""}`);
-                        else if (m.type === 'ass_dialogue') finalBlocks.push(
-                            `${m.prefix},${translated[tIdx++] || ""}`);
-                        else if (m.type === 'empty') finalBlocks.push("");
-                        else finalBlocks.push(m.content);
+                    var tIdx = 0;
+                    meta.forEach(function(m) {
+                        if (m.type === 'sub') {
+                            finalBlocks.push(m.header + '\n' + m.time + '\n' + (translated[tIdx++] ||
+                            ""));
+                        } else if (m.type === 'ass_dialogue') {
+                            finalBlocks.push(m.prefix + ',' + (translated[tIdx++] || ""));
+                        } else if (m.type === 'empty') {
+                            finalBlocks.push("");
+                        } else {
+                            finalBlocks.push(m.content);
+                        }
                     });
 
-                    let pct = Math.min(Math.floor(((i + batch.length) / lines.length) * 100), 100);
+                    var pct = Math.min(Math.floor(((i + batch.length) / lines.length) * 100), 100);
                     progressBarFill.style.width = pct + '%';
                     percentageText.textContent = pct + '%';
-                    statusText.textContent = `กำลังแปล ${i + batch.length} / ${lines.length}...`;
+                    statusText.textContent = 'กำลังแปล ' + (i + batch.length) + ' / ' + lines.length +
+                    '...';
                     await sleep(10);
                 }
 
-                let finalContent = (fileExtension === 'srt' || fileExtension === 'vtt') ? finalBlocks.join(
+                var finalContent = (fileExtension === 'srt' || fileExtension === 'vtt') ? finalBlocks.join(
                     '\n\n') : finalBlocks.join('\n');
-                const blob = new Blob([finalContent], { type: "text/plain;charset=utf-8" });
+                var blob = new Blob([finalContent], { type: "text/plain;charset=utf-8" });
                 saveAs(blob, selectedFile.name.replace(/\.[^/.]+$/, "") + "." + targetLang + "." +
                     fileExtension);
 
-                if (engine === 'openai') {
-                    statusText.textContent = "🎉 แปลเสร็จ! (OpenAI จัดการชื่อเอง)";
-                } else {
-                    statusText.textContent = "🎉 แปลเสร็จ! (Google + Placeholder)";
-                }
+                statusText.textContent = engine === 'openai' ?
+                    '🎉 แปลเสร็จ! (OpenAI จัดการชื่อเอง)' :
+                    '🎉 แปลเสร็จ! (Google + Placeholder ทับศัพท์อัตโนมัติ)';
                 percentageText.textContent = "100%";
 
             } catch (err) {
@@ -1039,7 +1054,7 @@
                     percentageText.textContent = '0%';
                 } else {
                     console.error(err);
-                    statusText.textContent = "❌ เกิดข้อผิดพลาด";
+                    statusText.textContent = "❌ เกิดข้อผิดพลาด: " + err.message;
                 }
             } finally {
                 isTranslating = false;
